@@ -1,6 +1,6 @@
 #!/bin/bash --login
 
-#SBATCH --nodes=2
+#SBATCH --nodes=4
 #SBATCH --time=0:10:0
 #SBATCH --partition=standard
 #SBATCH --qos=standard
@@ -17,7 +17,7 @@ export MPI_TYPE_DEPTH=20
 
 echo "Starting job $SLURM_JOB_ID at `date`"
 
-for p in 1 36 72
+for p in 1 36 72 144
 do
 
 mpiexec_mpt -ppn 36 -n $p ./benchio
