@@ -9,9 +9,9 @@
 #SBATCH --cpus-per-task=1
 #SBATCH --exclusive
 
-module load intel-compilers-18
-module load hdf5parallel/1.10.6-intel18-mpt222
-module load netcdf-parallel/4.7.4-intel18-mpt222
+module load intel-compilers-19
+module load hdf5parallel/1.10.6-intel19-mpt225
+module load netcdf-parallel/4.6.2-intel19-mpt225
 
 export MPI_TYPE_DEPTH=20
 
