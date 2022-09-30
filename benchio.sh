@@ -10,7 +10,6 @@
 #SBATCH --exclusive
 
 module load intel-compilers-19
-module load hdf5parallel/1.10.6-intel19-mpt225
 module load netcdf-parallel/4.6.2-intel19-mpt225
 
 export MPI_TYPE_DEPTH=20
