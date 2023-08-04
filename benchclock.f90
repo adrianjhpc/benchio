@@ -15,6 +15,11 @@ module benchclock
   integer, parameter :: intkind = int64kind
   integer(kind = intkind) :: count,rate
 
+  private
+
+  public benchtime
+  public benchtick
+
 contains
 
 double precision function benchtime()

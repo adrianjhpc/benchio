@@ -1,2 +1,3 @@
 # benchio
-A version of the benchio parallel I/O benchmark for teaching with
+A research version of the benchio, which is a parallel I/O benchmark.
+

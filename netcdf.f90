@@ -2,14 +2,13 @@ module ionetcdf
 
   use netcdf
   use mpi
+  use benchutil
   
   implicit none
 
 contains
 
 subroutine netcdfwrite(filename, iodata, n1, n2, n3, cartcomm)
-
-  integer, parameter :: ndim = 3
 
   character*(*) :: filename
   

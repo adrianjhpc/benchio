@@ -1,87 +1,56 @@
 program benchio
 
+  use benchutil
   use benchclock
   use mpiio
+  use ioserial
   use iohdf5
   use ionetcdf
+  use adios
+  use daos
 
   implicit none
 
-  integer, parameter :: numiolayer = 4
-  integer, parameter :: numstriping = 3
-  integer, parameter :: maxlen = 64
+  character*(maxlen) :: filename, suffix
 
-  character*(maxlen), dimension(numiolayer)  :: iostring, iolayername
-  character*(maxlen), dimension(numstriping) :: stripestring
-
-  character*(maxlen) :: filename
-
-  integer :: iolayer, istriping
+  integer :: iolayer, istriping, ierr
 
 ! Set local array size - global sizes l1, l2 and l3 are scaled
 ! by number of processes in each dimension
 
-  integer, parameter :: n1 = 128
-  integer, parameter :: n2 = 128
-  integer, parameter :: n3 = 128
-
   integer :: i1, i2, i3, j1, j2, j3, l1, l2, l3, p1, p2, p3
 
-  double precision :: iodata(0:n1+1, 0:n2+1, 0:n3+1)
-
-  integer :: rank, size, ierr, comm, cartcomm, dblesize
-  integer, dimension(ndim) :: dims, coords
-
-  integer, parameter :: iounit = 12
-  integer, parameter :: mib = 1024*1024
+  double precision, allocatable, dimension(:,:,:) :: iodata
 
   logical :: reorder = .false.
-  logical, dimension(ndim) :: periods = [.false., .false., .false.]
 
-  double precision :: t0, t1, time, iorate, mibdata
+  double precision :: t0, t1, time, iorate, kibdata, mibdata, gibdata
+  
+  call benchioinit()
+  
+  call processarguments()
+  
+  ! Set 3D processor grid
+  dims = 0
 
-  iostring(1) = 'Serial'
-  iostring(2) = 'MPI-IO'
-  iostring(3) = ' HDF5'
-  iostring(4) = 'NetCDF'
-
-  iolayername(1) = 'serial.dat'
-  iolayername(2) = 'mpiio.dat'
-  iolayername(3) = 'hdf5.dat'
-  iolayername(4) = 'netcdf.dat'
-
-  stripestring(1) = 'unstriped'
-  stripestring(2) = 'striped'
-  stripestring(3) = 'defstriped'
-
-  call MPI_Init(ierr)
-
-  comm = MPI_COMM_WORLD
-
-  call MPI_Comm_size(comm, size, ierr)
-  call MPI_Comm_rank(comm, rank, ierr)
-
-  dims(:) = 0
-
-! Set 3D processor grid
-
+  ! Set 3D processor grid
   call MPI_Dims_create(size, ndim, dims, ierr)
 
-! Reverse dimensions as MPI assumes C ordering (this is not essential)
-
+  ! Reverse dimensions as MPI assumes C ordering (this is not essential)
   p1 = dims(3)
   p2 = dims(2)
   p3 = dims(1)
 
-! Compute global sizes
-
+  ! Compute global sizes
   l1 = p1*n1
   l2 = p2*n2
   l3 = p3*n3
 
   call MPI_Type_size(MPI_DOUBLE_PRECISION, dblesize, ierr)
 
-  mibdata = float(dblesize*n1*n2*n3)*float(p1*p2*p3)/float(mib)
+  kibdata = float(dblesize)*float(n1)*float(n2)*float(n3)*float(p1)*float(p2)*float(p3)/float(kib)
+  mibdata = float(dblesize)*float(n1)*float(n2)*float(n3)*float(p1)*float(p2)*float(p3)/float(mib)
+  gibdata = float(dblesize)*float(n1)*float(n2)*float(n3)*float(p1)*float(p2)*float(p3)/float(gib)
 
   if (rank == 0) then
      write(*,*)
@@ -93,23 +62,43 @@ program benchio
      write(*,*) 'Array size is   (', n1, ', ', n2, ', ', n3, ')'
      write(*,*) 'Global size is  (', l1, ', ', l2, ', ', l3, ')'
      write(*,*)
+     write(*,*) 'Total amount of data = ', mibdata, ' KiB'
      write(*,*) 'Total amount of data = ', mibdata, ' MiB'
+     write(*,*) 'Total amount of data = ', mibdata, ' GiB'
      write(*,*)
      write(*,*) 'Clock resolution is ', benchtick()*1.0e6, ', usecs'
+     write(*,*) "Using the following IO methods"
+     write(*,*)
+     write(*,*) "------------------------------"
+
+     do iolayer = 1, numiolayer
+        if (doio(iolayer)) write(*,*) iolayername(iolayer)
+     end do
+
+     write(*,*)
+     write(*,*) "Using the following stripings"
+     write(*,*) "-----------------------------"
+     
+     do istriping = 1, numstriping
+        if (dostripe(istriping)) write(*,*) stripestring(istriping)
+     end do
+
+     write(*,*)
+
   end if
   
+  allocate(iodata(0:n1+1, 0:n2+1, 0:n3+1))
+
   dims(1) = p1
   dims(2) = p2
   dims(3) = p3
 
   call MPI_Cart_create(comm, ndim, dims, periods, reorder, cartcomm, ierr)
 
-! Set halos to illegal values
-
+  ! Set halos to illegal values
   iodata(:,:,:) = -1
   
-! Set iodata core to have unique values 1, 2, ..., p1*n1*p2*n2*p3*n3
-
+  ! Set iodata core to have unique values 1, 2, ..., p1*n1*p2*n2*p3*n3
   call MPI_Cart_coords(cartcomm, rank, ndim, coords, ierr)
   
   do i3 = 1, n3
@@ -139,6 +128,24 @@ program benchio
      do istriping = 1, numstriping
 
         filename = trim(stripestring(istriping))//'/'//trim(iolayername(iolayer))
+        suffix = ""
+
+        iocomm = cartcomm
+
+        ! Deal with multiple files
+
+        if (iolayer == iolayermulti) then
+           iocomm = MPI_COMM_SELF
+           write(suffix,fmt="(i6.6)") rank
+        end if
+           
+        if (iolayer == iolayernode) then
+           iocomm = nodecomm
+           write(suffix,fmt="(i6.6)") nodenum
+        end if
+           
+        suffix = trim(suffix)//".dat"
+        filename = trim(filename)//suffix
 
         if (rank == 0) then
            write(*,*) 'Writing to ', filename
@@ -149,17 +156,23 @@ program benchio
 
         select case (iolayer)
 
-        case(1)
-           call serialwrite(filename, iodata, n1, n2, n3, cartcomm)
-
-        case(2)
-           call mpiiowrite(filename, iodata, n1, n2, n3, cartcomm)
-
-        case(3)
-           call hdf5write(filename, iodata, n1, n2, n3, cartcomm)
+        case(1:3)
+           call serialwrite(filename, iodata, n1, n2, n3, iocomm)
 
         case(4)
-           call netcdfwrite(filename, iodata, n1, n2, n3, cartcomm)
+           call mpiiowrite(filename, iodata, n1, n2, n3, iocomm)
+
+        case(5)
+           call hdf5write(filename, iodata, n1, n2, n3, iocomm)
+
+        case(6)
+           call netcdfwrite(filename, iodata, n1, n2, n3, iocomm)
+
+        case(7)
+           call adioswrite(filename, iodata, n1, n2, n3, iocomm)
+
+        case(8)
+           call daoswrite(filename, iodata, n1, n2, n3, iocomm)
 
         case default
            write(*,*) 'Illegal value of iolayer = ', iolayer
@@ -175,8 +188,23 @@ program benchio
 
         if (rank == 0) then
            write(*,*) 'time = ', time, ', rate = ', iorate, ' MiB/s'
-           call fdelete(filename)
         end if
+
+        ! Rank 0 in iocomm deletes
+        if (iolayer == 7) then
+          ! ADIOS makes a directory so the file deletion function will not work
+          ! use the shell instead
+
+          call MPI_Barrier(comm, ierr)
+          if (rank == 0) then
+            call execute_command_line("rm -r "//filename)
+          end if 
+          call MPI_Barrier(comm, ierr)
+        
+        else
+           call leaderdelete(filename, iocomm)
+        endif
+
 
      end do
   end do
@@ -192,18 +220,3 @@ program benchio
   call MPI_Finalize(ierr)
   
 end program benchio
-
-subroutine fdelete(filename)
-
-  implicit none
-
-  character *(*) :: filename
-  integer, parameter :: iounit = 15
-  integer :: stat
-
-  write(*,*) 'Deleting: ', filename
-
-  open(unit=iounit, iostat=stat, file=filename, status='old')
-  if (stat.eq.0) close(unit=iounit, status='delete')
-
-end subroutine fdelete

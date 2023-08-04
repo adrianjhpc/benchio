@@ -2,14 +2,13 @@ module iohdf5
 
   use hdf5
   use mpi
-  
+  use benchutil
+
   implicit none
 
 contains
 
 subroutine hdf5write(filename, iodata, n1, n2, n3, cartcomm)
-
-  integer, parameter :: ndim = 3
 
   character*(*) :: filename
   

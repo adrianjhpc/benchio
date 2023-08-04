@@ -1,8 +1,13 @@
 MF=	Makefile
 
-FC=mpif90
+FC=mpiifort
 FFLAGS=
 LFLAGS=-L/mnt/lustre/indy2lfs/sw/hdf5parallel/1.10.6-intel19-mpt225/lib -lhdf5_fortran -lnetcdff -lnetcdf
+
+CC=mpiicc
+CFLAGS=-I/home/nx01/nx01/adrianj/uuid/include
+LCFLAGS=-L/home/nx01/nx01/adrianj/uuid/lib -luuid
+
 
 EXE=	benchio
 
@@ -19,25 +24,26 @@ SRC= \
 #
 
 .SUFFIXES:
-.SUFFIXES: .f90 .o
+.SUFFIXES: .f90 .o .c
 
 OBJ=	$(SRC:.f90=.o)
+COBJ=   $(SRC:.c=.o)
 
 .f90.o:
 	$(FC) $(FFLAGS) -c $<
 
-all:	$(EXE)
+.c.o:
+	$(CC) $(CFLAGS) -c $<
 
-$(EXE):	$(OBJ)
+all:	$(EXE) daos
+
+$(EXE):	$(OBJ) $(COBJ)
 	$(FC) $(FFLAGS) -o $@ $(OBJ) $(LFLAGS)
 
 $(OBJ):	$(MF)
+$(COBJ): $(MF)
 
-benchio.o: mpiio.o benchclock.o netcdf.o hdf5.o
+benchio.o: mpiio.o benchclock.o netcdf.o hdf5.o daos.o
 
 clean:
 	rm -f $(OBJ) *.mod $(EXE) core
-
-tar:
-	tar --exclude-vcs -cvf $(EXE).tar $(MF) $(SRC) benchio.pbs \
-		defstriped/README striped/README unstriped/README
