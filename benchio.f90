@@ -117,96 +117,100 @@ program benchio
 
   do iolayer = 1, numiolayer
 
-     if (rank == 0) then
-        write(*,*)
-        write(*,*) '------'
-        write(*,*) iostring(iolayer)
-        write(*,*) '------'
-        write(*,*)
+     if(doio(iolayer)) then
+
+        if (rank == 0) then
+           write(*,*)
+           write(*,*) '------'
+           write(*,*) iostring(iolayer)
+           write(*,*) '------'
+           write(*,*)
+        end if
+        
+        do istriping = 1, numstriping
+           
+           filename = trim(stripestring(istriping))//'/'//trim(iolayername(iolayer))
+           suffix = ""
+           
+           iocomm = cartcomm
+           
+           ! Deal with multiple files
+           
+           if (iolayer == iolayermulti) then
+              iocomm = MPI_COMM_SELF
+              write(suffix,fmt="(i6.6)") rank
+           end if
+           
+           if (iolayer == iolayernode) then
+              iocomm = nodecomm
+              write(suffix,fmt="(i6.6)") nodenum
+           end if
+           
+           suffix = trim(suffix)//".dat"
+           filename = trim(filename)//suffix
+           
+           if (rank == 0) then
+              write(*,*) 'Writing to ', filename
+           end if
+           
+           call MPI_Barrier(comm, ierr)
+           t0 = benchtime()
+           
+           select case (iolayer)
+              
+           case(1:3)
+              call serialwrite(filename, iodata, n1, n2, n3, iocomm)
+              
+           case(4)
+              call mpiiowrite(filename, iodata, n1, n2, n3, iocomm)
+              
+           case(5)
+              call hdf5write(filename, iodata, n1, n2, n3, iocomm)
+              
+           case(6)
+              call netcdfwrite(filename, iodata, n1, n2, n3, iocomm)
+              
+           case(7)
+              call adioswrite(filename, iodata, n1, n2, n3, iocomm)
+              
+           case(8)
+              call daoswrite(filename, iodata, n1, n2, n3, iocomm)
+              
+           case default
+              write(*,*) 'Illegal value of iolayer = ', iolayer
+              stop
+              
+           end select
+           
+           call MPI_Barrier(comm, ierr)
+           t1 = benchtime()
+           
+           time = t1 - t0
+           iorate = mibdata/time
+           
+           if (rank == 0) then
+              write(*,*) 'time = ', time, ', rate = ', iorate, ' MiB/s'
+           end if
+           
+           ! Rank 0 in iocomm deletes
+           if (iolayer == 7) then
+              ! ADIOS makes a directory so the file deletion function will not work
+              ! use the shell instead
+              
+              call MPI_Barrier(comm, ierr)
+              if (rank == 0) then
+                 call execute_command_line("rm -r "//filename)
+              end if
+              call MPI_Barrier(comm, ierr)
+              
+           else
+              call leaderdelete(filename, iocomm)
+           endif
+
+        end do
+        
      end if
 
-     do istriping = 1, numstriping
-
-        filename = trim(stripestring(istriping))//'/'//trim(iolayername(iolayer))
-        suffix = ""
-
-        iocomm = cartcomm
-
-        ! Deal with multiple files
-
-        if (iolayer == iolayermulti) then
-           iocomm = MPI_COMM_SELF
-           write(suffix,fmt="(i6.6)") rank
-        end if
-           
-        if (iolayer == iolayernode) then
-           iocomm = nodecomm
-           write(suffix,fmt="(i6.6)") nodenum
-        end if
-           
-        suffix = trim(suffix)//".dat"
-        filename = trim(filename)//suffix
-
-        if (rank == 0) then
-           write(*,*) 'Writing to ', filename
-        end if
-
-        call MPI_Barrier(comm, ierr)
-        t0 = benchtime()
-
-        select case (iolayer)
-
-        case(1:3)
-           call serialwrite(filename, iodata, n1, n2, n3, iocomm)
-
-        case(4)
-           call mpiiowrite(filename, iodata, n1, n2, n3, iocomm)
-
-        case(5)
-           call hdf5write(filename, iodata, n1, n2, n3, iocomm)
-
-        case(6)
-           call netcdfwrite(filename, iodata, n1, n2, n3, iocomm)
-
-        case(7)
-           call adioswrite(filename, iodata, n1, n2, n3, iocomm)
-
-        case(8)
-           call daoswrite(filename, iodata, n1, n2, n3, iocomm)
-
-        case default
-           write(*,*) 'Illegal value of iolayer = ', iolayer
-           stop
-
-        end select
-
-        call MPI_Barrier(comm, ierr)
-        t1 = benchtime()
-
-        time = t1 - t0
-        iorate = mibdata/time
-
-        if (rank == 0) then
-           write(*,*) 'time = ', time, ', rate = ', iorate, ' MiB/s'
-        end if
-
-        ! Rank 0 in iocomm deletes
-        if (iolayer == 7) then
-          ! ADIOS makes a directory so the file deletion function will not work
-          ! use the shell instead
-
-          call MPI_Barrier(comm, ierr)
-          if (rank == 0) then
-            call execute_command_line("rm -r "//filename)
-          end if 
-          call MPI_Barrier(comm, ierr)
-        
-        else
-           call leaderdelete(filename, iocomm)
-        endif
-
-
-     end do
   end do
 
   if (rank == 0) then

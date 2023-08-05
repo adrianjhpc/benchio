@@ -50,8 +50,8 @@ $(EXE): $(FOBJ) $(COBJ)
 $(FOBJ): $(MF)
 $(COBJ): $(MF)
 
-benchio.o: benchclock.o benchutil.o mpiio.o serial.o netcdf.o hdf5.o daos_c_interface.o daos.o daos_c.o 
+benchio.o: benchclock.o benchutil.o mpiio.o serial.o netcdf.o hdf5.o adios.o daos_c_interface.o daos.o daos_c.o 
 
-tar:
-	tar --exclude-vcs -cvf $(EXE).tar $(MF) $(SRC) benchio.pbs \
-		defstriped/README striped/README unstriped/README
+clean: 
+	rm -fr *.o *.mod benchio
+

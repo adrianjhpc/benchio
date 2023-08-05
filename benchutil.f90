@@ -12,8 +12,8 @@ module benchutil
   character*(maxlen), dimension(numiolayer)  :: iostring, iolayername
   character*(maxlen), dimension(numstriping) :: stripestring
 
-  logical, dimension(numiolayer)  :: doio
-  logical, dimension(numstriping) :: dostripe
+  logical, dimension(numiolayer)  :: doio = .false.
+  logical, dimension(numstriping) :: dostripe = .false.
 
   integer :: rank, size, comm, cartcomm, iocomm, dblesize
   integer :: nodecomm, nodebosscomm, nodenum
@@ -63,14 +63,14 @@ contains
     iostring(7) = 'Adios2'
     iostring(8) = 'DAOS'
     
-    iolayername(1) = "serial"
-    iolayername(2) = "proc"
-    iolayername(3) = "node"
-    iolayername(4) = "mpiio"
-    iolayername(5) = "hdf5"
-    iolayername(6) = "netcdf"
-    iolayername(7) = "adios"
-    iolayername(8) = "daos"
+    iolayername(1) = 'serial'
+    iolayername(2) = 'proc'
+    iolayername(3) = 'node'
+    iolayername(4) = 'mpiio'
+    iolayername(5) = 'hdf5'
+    iolayername(6) = 'netcdf'
+    iolayername(7) = 'adios'
+    iolayername(8) = 'daos'
     
     stripestring(1) = 'unstriped'
     stripestring(2) = 'striped'
@@ -216,10 +216,10 @@ contains
     
     do iarg = 5, numargs
        ioflag = .false.
-       stripeflag = .false.
+       stripeflag = .false.       
        
-       call get_command_argument(iarg, argstring)
-       
+       call get_command_argument(iarg, argstring)      
+
        do iolayer = 1, numiolayer
           if (iolayername(iolayer) == argstring) then
              ioflag = .true.
@@ -245,12 +245,30 @@ contains
     if (count(doio(:)) == 0) then
        doio(:) = .true.
     end if
-    
+
     if (count(dostripe(:)) == 0) then
        dostripe(:) = .true.
     end if
         
   end subroutine processarguments
+
+  subroutine split_string(original_string, string_1, string_2, delim, delim_index)
+
+    implicit none
+
+    character(*) :: original_string
+    character :: delim
+    character(*), intent(inout) :: string_1,string_2
+    integer :: delim_index
+
+    original_string = trim(original_string)
+
+    delim_index = scan(original_string, delim)
+
+    string_1 = original_string(1:delim_index-1)
+    string_2 = original_string(delim_index+1:)
+
+  end subroutine split_string
 
 end module
 
