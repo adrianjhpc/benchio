@@ -62,9 +62,9 @@ program benchio
      write(*,*) 'Array size is   (', n1, ', ', n2, ', ', n3, ')'
      write(*,*) 'Global size is  (', l1, ', ', l2, ', ', l3, ')'
      write(*,*)
-     write(*,*) 'Total amount of data = ', mibdata, ' KiB'
-     write(*,*) 'Total amount of data = ', mibdata, ' MiB'
-     write(*,*) 'Total amount of data = ', mibdata, ' GiB'
+     write(*,'(a,f12.2,a)') 'Total amount of data = ', kibdata, ' KiB'
+     write(*,'(a,f12.2,a)') 'Total amount of data = ', mibdata, ' MiB'
+     write(*,'(a,f12.2,a)') 'Total amount of data = ', gibdata, ' GiB'
      write(*,*)
      write(*,*) 'Clock resolution is ', benchtick()*1.0e6, ', usecs'
      write(*,*) "Using the following IO methods"
@@ -189,7 +189,7 @@ program benchio
            iorate = mibdata/time
            
            if (rank == 0) then
-              write(*,*) 'time = ', time, ', rate = ', iorate, ' MiB/s'
+              write(*,'(a,f10.2,a,f12.2,a)') 'time = ', time, ', rate = ', iorate, ' MiB/s'
            end if
            
            ! Rank 0 in iocomm deletes
