@@ -8,7 +8,7 @@ uuid_t seed;
 int initialised = 0;
 static daos_handle_t pool_handle;
 static daos_handle_t container_handle;
-static uuid_t container_uuid;
+uuid_t container_uuid;
 
 #define ERROR -1
 #define SUCCESS 0
@@ -80,7 +80,9 @@ void daos_initialise(char *pool_string, MPI_Comm communicator){
   int ierr, comm_rank;
   daos_pool_info_t pool_info;
   daos_cont_info_t container_info;
-  char container_name[] = "benchio";
+  char *container_name = "benchio";
+  daos_prop_t *container_properties;
+  char container_string[37];
 
   if(initialised){
     return;
@@ -89,6 +91,7 @@ void daos_initialise(char *pool_string, MPI_Comm communicator){
   MPI_Comm_rank(communicator, &comm_rank);
 
   ierr = daos_init();
+
   if(ierr){
     printf("Problem initialising DAOS\n");
     perror("daos_init");
@@ -98,15 +101,15 @@ void daos_initialise(char *pool_string, MPI_Comm communicator){
 
   if(comm_rank == 0) {
   
-    ierr = daos_pool_connect(pool_string, NULL, DAOS_PC_RW, &pool_handle, NULL, NULL);  
+    ierr = daos_pool_connect("2475d6df-c6cf-459d-81c5-296ebbca0a6a", NULL, DAOS_PC_RW, &pool_handle, NULL, NULL);  
     if(ierr){
-      printf("Problem connecting to the daos pool %s\n", pool_string);
+      printf("Problem connecting to the daos pool %s (%d)\n", pool_string, ierr);
       perror("daos_pool_connect");
       MPI_Abort(communicator, 0);
       return;
     }
     
-    ierr = uuid_parse("00000000-0000-0000-0000-000000000000", seed);
+    /*    ierr = uuid_parse("00000000-0000-0000-0000-000000000000", seed);
     if(ierr != 0){
       printf("Error doing the initial seed parse");
       perror("uuid_parse");
@@ -121,20 +124,37 @@ void daos_initialise(char *pool_string, MPI_Comm communicator){
       MPI_Abort(communicator, 0);
       return;
     }
-    
-    ierr = daos_cont_open(pool_handle, container_uuid, DAOS_COO_RW, &container_handle, &container_info, NULL);
-    if (ierr == -DER_NONEXIST) {
-      ierr = daos_cont_create(pool_handle, &container_uuid, NULL, NULL);
+   
+    uuid_unparse(container_uuid, container_string);*/
+
+    ierr = daos_cont_open(pool_handle, container_name, DAOS_COO_RW, &container_handle, &container_info, NULL);
+
+    if (ierr == -1005) {
+
+      container_properties = daos_prop_alloc(1);
+      container_properties->dpp_entries[0].dpe_type = DAOS_PROP_CO_LABEL;
+      ierr = daos_prop_set_str(container_properties, DAOS_PROP_CO_LABEL, container_name, strlen(container_name));
       if(ierr != 0){
-	printf("Error doing the initial seed parse");
+	printf("Error doing the property set for the container %d",ierr);
+	perror("daos_prop_set_str");
+	MPI_Abort(communicator, 0);
+	return;
+      }      
+
+      ierr = daos_cont_create(pool_handle, &container_uuid, container_properties, NULL);
+      //ierr = daos_cont_create(pool_handle, &container_uuid, NULL, NULL);
+      if(ierr != 0){
+	printf("Error doing the container create");
 	perror("daos_cont_create");
 	MPI_Abort(communicator, 0);
 	return;
       }      
 
-      ierr = daos_cont_open(pool_handle, container_uuid, DAOS_COO_RW, &container_handle, &container_info, NULL);
+      uuid_unparse(container_uuid, container_string);
+
+      ierr = daos_cont_open(pool_handle, container_name, DAOS_COO_RW, &container_handle, &container_info, NULL);
       if(ierr != 0){
-	printf("Error opening the container\n");
+	printf("Error opening the container %d\n", ierr);
 	perror("daos_cont_open");
 	MPI_Abort(communicator, 0);
 	return;
@@ -142,7 +162,27 @@ void daos_initialise(char *pool_string, MPI_Comm communicator){
     }
   }
 
-  communicate_daos_handles(communicator);
+  MPI_Barrier(communicator);
+
+  if(comm_rank != 0){
+
+    ierr = daos_pool_connect("2475d6df-c6cf-459d-81c5-296ebbca0a6a", NULL, DAOS_PC_RW, &pool_handle, NULL, NULL);  
+    if(ierr){
+      printf("Problem connecting to the daos pool %s (%d)\n", pool_string, ierr);
+      perror("daos_pool_connect");
+      MPI_Abort(communicator, 0);
+      return;
+    }
+
+    ierr = daos_cont_open(pool_handle, container_name, DAOS_COO_RW, &container_handle, &container_info, NULL);
+    if(ierr != 0){
+      printf("Error opening the container %d",ierr);
+      MPI_Abort(communicator, 0);
+      return;
+    }
+  }
+
+  //  communicate_daos_handles(communicator);
     
   initialised = 1;
 
@@ -173,9 +213,18 @@ void communicate_daos_handles(MPI_Comm communicator){
 
   ierr = MPI_Bcast(&global_handle.iov_buf_len, 1, MPI_UINT64_T, 0, communicator);
 
-  if(comm_rank != 0){
-    global_handle.iov_len = global_handle.iov_buf_len;
-    global_handle.iov_buf = malloc(global_handle.iov_buf_len);
+  // TODO work out why we need to two this twice
+  global_handle.iov_len = global_handle.iov_buf_len;
+  global_handle.iov_buf = malloc(global_handle.iov_buf_len);
+
+  if(comm_rank == 0){
+    ierr = daos_pool_local2global(pool_handle, &global_handle);
+    if(ierr != 0){
+      printf("Error converting local pool handle to global pool handle\n");
+      perror("daos_cont_local2global");
+      MPI_Abort(communicator, 0);
+      return;
+    }
   }
 
   ierr = MPI_Bcast(global_handle.iov_buf, global_handle.iov_buf_len, MPI_BYTE, 0, communicator);
@@ -207,9 +256,18 @@ void communicate_daos_handles(MPI_Comm communicator){
 
   ierr = MPI_Bcast(&global_handle.iov_buf_len, 1, MPI_UINT64_T, 0, communicator);
 
-  if(comm_rank != 0){
-    global_handle.iov_len = global_handle.iov_buf_len;
-    global_handle.iov_buf = malloc(global_handle.iov_buf_len);
+  global_handle.iov_len = global_handle.iov_buf_len;
+  global_handle.iov_buf = malloc(global_handle.iov_buf_len);
+
+  if(comm_rank == 0){
+    printf("Communicate container handle rank 0 %ld\n", container_handle.cookie);
+    ierr = daos_cont_local2global(container_handle, &global_handle);
+    if(ierr != 0){
+      printf("Error converting local container handle to global container handle\n");
+      perror("daos_cont_local2global");
+      MPI_Abort(communicator, 0);
+      return;
+    }
   }
 
   ierr = MPI_Bcast(global_handle.iov_buf, global_handle.iov_buf_len, MPI_BYTE, 0, communicator);
@@ -223,6 +281,8 @@ void communicate_daos_handles(MPI_Comm communicator){
       return;
     }
   }
+
+  printf("Communicate container handle %ld\n", container_handle.cookie);
 
   return;
 
@@ -248,6 +308,7 @@ void daos_write_array(long int *arraysize, long int *arraygsize, long int *array
   int comm_rank;
   char array_name[100];
   daos_obj_id_t array_obj_id;
+  uint64_t container_obj_id;
   uuid_t array_uuid;  
   daos_oclass_id_t array_obj_class;
   daos_handle_t array_handle;
@@ -256,30 +317,38 @@ void daos_write_array(long int *arraysize, long int *arraygsize, long int *array
   d_sg_list_t sgl;
   daos_range_t rg;
   d_iov_t iov;
+  char container_handle_string[37];
+  char array_uuid_string[37];
 
+  MPI_Comm_rank(communicator, &comm_rank);
 
   sprintf(array_name,"%d",comm_rank);
   
   strcat(array_name, "-data");
   
-  printf("Array name: %s\n", array_name);
-  
   array_obj_class = str_to_oc(obj_class);  
   
   array_obj_id.hi = 0;
   array_obj_id.lo = 0;
+
+
+  ierr = uuid_parse("00000000-0000-0000-0000-000000000000", seed);
   
-  // the uuid of the index kv is determined as the md5 of the index key
+  
   uuid_generate_md5(array_uuid, seed, array_name, strlen(array_name));
-  
-  memcpy(&(array_obj_id.hi), &(array_uuid), sizeof(uint64_t));
-  memcpy(&(array_obj_id.lo), &(array_uuid) + sizeof(uint64_t), sizeof(uint64_t));
+
+  uuid_unparse(array_uuid, array_uuid_string);
+  printf("%s %s\n", array_name, array_uuid_string);
+
+  memcpy(&(array_obj_id.hi), &(array_uuid[0]) + sizeof(uint64_t), sizeof(uint64_t));
+  memcpy(&(array_obj_id.lo), &(array_uuid[0]), sizeof(uint64_t));
   
   /*
    * create and open array object
    */ 
-  daos_array_generate_oid(container_handle, &array_obj_id, true, array_obj_class, 0, 0);
-  
+  //  daos_array_generate_oid(container_handle, &array_obj_id, true, array_obj_class, 0, 0);
+    daos_array_generate_oid(container_handle, &array_obj_id, true, 0, 0, 0);
+  /*    
   ierr = daos_array_create(container_handle, array_obj_id, DAOS_TX_NONE, 1, block_size, &array_handle, NULL);
   
   if (ierr == DER_EXIST) {
@@ -317,7 +386,7 @@ void daos_write_array(long int *arraysize, long int *arraygsize, long int *array
     perror("daos_array_close");
     MPI_Abort(communicator, 0);
   }
- 
+  */
   return;
   
 }
