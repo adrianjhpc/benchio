@@ -9,13 +9,14 @@ module daos
 
 contains
 
-subroutine daoswrite(filename, iodata, n1, n2, n3, cartcomm)
+subroutine daoswrite(filename, iodata, n1, n2, n3, cartcomm, daosconfig)
   
   implicit none
 
+  integer, parameter :: check_data = 0
   character*(*) :: filename
   
-  integer :: n1, n2, n3
+  integer :: n1, n2, n3, daosconfig
   double precision, dimension(0:n1+1,0:n2+1,0:n3+1) :: iodata
   double precision, dimension(n1*n2*n3) :: out_data, read_data
 
@@ -72,13 +73,46 @@ subroutine daoswrite(filename, iodata, n1, n2, n3, cartcomm)
 
   blocksize = 1024*1024
 
-  call daos_write(arraysize, arraygsize, arraysubsize, arraystart, out_data, object_class, blocksize, cartcomm)
+     
+  if(rank == 0) then
+     
+     if(daosconfig == 0) then
+        
+        write(*,*) 'DAOS separate arrays'
+        
+     else if(daosconfig == 1) then
+        
+        write(*,*) 'DAOS single array block'
+     
+     else if(daosconfig == 2) then
+        
+        write(*,*) 'DAOS single array separate rows/columns'
 
-  call daos_read(arraysize, arraygsize, arraysubsize, arraystart, read_data, object_class, cartcomm)
+     else
 
-  if(.not. all(out_data .eq. read_data)) then
-     write(*,*) 'out data and read data do not match'
+        write(*,*) 'Problem with daosconfig parameter'
+
+     end if
+   
   end if
+     
+
+  call daos_write(arraysize, arraygsize, arraysubsize, arraystart, out_data, object_class, blocksize, check_data, daosconfig, cartcomm)
+  
+  if(check_data == 1) then
+     
+     if(rank == 0) then
+        write(*,*) 'checking data so do not trust the timings'
+     end if
+     
+     call daos_read(arraysize, arraygsize, arraysubsize, arraystart, read_data, object_class, daosconfig, cartcomm)
+     
+     if(.not. all(out_data .eq. read_data)) then
+        write(*,*) 'out data and read data do not match'
+     end if
+     
+  end if
+  
   
   call daos_finish(cartcomm)
 

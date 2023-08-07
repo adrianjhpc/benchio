@@ -4,7 +4,7 @@
 
     <engine type="BP5">
 
-      <parameter key="NumAggregators" value="12"/>
+      <parameter key="NumAggregators" value="8"/>
       <parameter key="Verbose" value="0"/>
 
     </engine>

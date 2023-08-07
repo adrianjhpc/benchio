@@ -4,9 +4,9 @@ program benchio
   use benchclock
   use mpiio
   use ioserial
-  use iohdf5
-  use ionetcdf
-  use adios
+ ! use iohdf5
+ ! use ionetcdf
+ ! use adios
   use daos
 
   implicit none
@@ -165,16 +165,16 @@ program benchio
               call mpiiowrite(filename, iodata, n1, n2, n3, iocomm)
               
            case(5)
-              call hdf5write(filename, iodata, n1, n2, n3, iocomm)
+   !           call hdf5write(filename, iodata, n1, n2, n3, iocomm)
               
            case(6)
-              call netcdfwrite(filename, iodata, n1, n2, n3, iocomm)
+   !           call netcdfwrite(filename, iodata, n1, n2, n3, iocomm)
               
            case(7)
-              call adioswrite(filename, iodata, n1, n2, n3, iocomm)
+   !           call adioswrite(filename, iodata, n1, n2, n3, iocomm)
               
            case(8)
-              call daoswrite(filename, iodata, n1, n2, n3, iocomm)
+              call daoswrite(filename, iodata, n1, n2, n3, iocomm, 0)
               
            case default
               write(*,*) 'Illegal value of iolayer = ', iolayer
