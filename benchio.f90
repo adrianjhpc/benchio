@@ -62,7 +62,7 @@ program benchio
      write(*,*) 'Array size is   (', n1, ', ', n2, ', ', n3, ')'
      write(*,*) 'Global size is  (', l1, ', ', l2, ', ', l3, ')'
      write(*,*)
-     write(*,'(a,f12.2,a)') 'Total amount of data = ', kibdata, ' KiB'
+   !  write(*,'(a,f12.2,a)') 'Total amount of data = ', kibdata, ' KiB'
      write(*,'(a,f12.2,a)') 'Total amount of data = ', mibdata, ' MiB'
      write(*,'(a,f12.2,a)') 'Total amount of data = ', gibdata, ' GiB'
      write(*,*)
@@ -174,7 +174,7 @@ program benchio
    !           call adioswrite(filename, iodata, n1, n2, n3, iocomm)
               
            case(8)
-              call daoswrite(filename, iodata, n1, n2, n3, iocomm, 0)
+              call daoswrite(filename, iodata, n1, n2, n3, iocomm, 1)
               
            case default
               write(*,*) 'Illegal value of iolayer = ', iolayer
@@ -221,6 +221,8 @@ program benchio
      write(*,*)
   end if
 
-  call MPI_Finalize(ierr)
+  call MPI_Comm_free(iocomm, ierr)
+
+  call benchiofinal()
   
 end program benchio

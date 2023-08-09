@@ -13,7 +13,7 @@ subroutine daoswrite(filename, iodata, n1, n2, n3, cartcomm, daosconfig)
   
   implicit none
 
-  integer, parameter :: check_data = 0
+  integer, parameter :: check_data = 1
   character*(*) :: filename
   
   integer :: n1, n2, n3, daosconfig
@@ -96,8 +96,7 @@ subroutine daoswrite(filename, iodata, n1, n2, n3, cartcomm, daosconfig)
    
   end if
      
-
-  call daos_write(arraysize, arraygsize, arraysubsize, arraystart, out_data, object_class, blocksize, check_data, daosconfig, cartcomm)
+  call daos_write(ndim, arraysize, arraygsize, arraysubsize, arraystart, out_data, object_class, blocksize, check_data, daosconfig, cartcomm)
   
   if(check_data == 1) then
      
@@ -105,10 +104,11 @@ subroutine daoswrite(filename, iodata, n1, n2, n3, cartcomm, daosconfig)
         write(*,*) 'checking data so do not trust the timings'
      end if
      
-     call daos_read(arraysize, arraygsize, arraysubsize, arraystart, read_data, object_class, daosconfig, cartcomm)
+     call daos_read(ndim, arraysize, arraygsize, arraysubsize, arraystart, read_data, object_class, daosconfig, cartcomm)
      
      if(.not. all(out_data .eq. read_data)) then
-        write(*,*) 'out data and read data do not match'
+        write(*,*) rank,'original ',out_data,' read ',read_data
+        write(*,*) rank,'out data and read data do not match'
      end if
      
   end if

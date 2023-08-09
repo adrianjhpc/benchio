@@ -53,7 +53,6 @@ void daos_initialise(char *pool_string, MPI_Comm communicator){
   int ierr, comm_rank;
   daos_pool_info_t pool_info;
   daos_cont_info_t container_info;
-  char *container_name = "benchio";
   daos_prop_t *container_properties;
   char container_string[37];
 
@@ -72,7 +71,7 @@ void daos_initialise(char *pool_string, MPI_Comm communicator){
     return;
   }  
 
-  if(comm_rank == 0) {
+  //  if(comm_rank == 0) {
   
     ierr = daos_pool_connect("2475d6df-c6cf-459d-81c5-296ebbca0a6a", NULL, DAOS_PC_RW, &pool_handle, NULL, NULL);  
     if(ierr){
@@ -108,22 +107,20 @@ void daos_initialise(char *pool_string, MPI_Comm communicator){
       container_properties->dpp_entries[0].dpe_type = DAOS_PROP_CO_LABEL;
       ierr = daos_prop_set_str(container_properties, DAOS_PROP_CO_LABEL, container_name, strlen(container_name));
       if(ierr != 0){
-	printf("Error doing the property set for the container %d",ierr);
+	printf("Error doing the property set for the container %d\n",ierr);
 	perror("daos_prop_set_str");
 	MPI_Abort(communicator, 0);
 	return;
       }      
 
-      ierr = daos_cont_create(pool_handle, &container_uuid, container_properties, NULL);
+      ierr = daos_cont_create(pool_handle, NULL, container_properties, NULL);
       //ierr = daos_cont_create(pool_handle, &container_uuid, NULL, NULL);
-      if(ierr != 0){
-	printf("Error doing the container create");
+      if(ierr != 0 && ierr != -1004){
+	printf("Error doing the container create %d\n", ierr);
 	perror("daos_cont_create");
 	MPI_Abort(communicator, 0);
 	return;
       }      
-
-      uuid_unparse(container_uuid, container_string);
 
       ierr = daos_cont_open(pool_handle, container_name, DAOS_COO_RW, &container_handle, NULL, NULL);
       if(ierr != 0){
@@ -132,11 +129,18 @@ void daos_initialise(char *pool_string, MPI_Comm communicator){
 	MPI_Abort(communicator, 0);
 	return;
       }      
+
+    }else if(ierr != 0){
+	printf("Error opening the container %d\n", ierr);
+	perror("daos_cont_open");
+	MPI_Abort(communicator, 0);
+	return;
     }
 
-  }
+    //  }
 
-  MPI_Barrier(communicator);
+/*MPI_Barrier(communicator);
+  sleep(10);
 
   if(comm_rank != 0){
 
@@ -150,12 +154,12 @@ void daos_initialise(char *pool_string, MPI_Comm communicator){
 
     ierr = daos_cont_open(pool_handle, container_name, DAOS_COO_RW, &container_handle, NULL, NULL);
     if(ierr != 0){
-      printf("Error opening the container %d",ierr);
+      printf("%d Error opening the container %d\n",comm_rank,ierr);
       MPI_Abort(communicator, 0);
       return;
     }
   }
-   
+*/ 
   initialised = 1;
 
   return;
@@ -260,7 +264,7 @@ void communicate_daos_handles(MPI_Comm communicator){
 
 }
 
-void daos_write_array_fortran(long int *arraysize, long int *arraygsize, long int *arraysubsize, long int *arraystart, double *data, char *obj_class, size_t block_size, int keep_data, int daosconfig, MPI_Fint communicator){
+void daos_write_array_fortran(int num_dims, long int *arraysize, long int *arraygsize, long int *arraysubsize, long int *arraystart, double *data, char *obj_class, size_t block_size, int keep_data, int daosconfig, MPI_Fint communicator){
 
   MPI_Comm c_communicator;
 
@@ -268,9 +272,11 @@ void daos_write_array_fortran(long int *arraysize, long int *arraygsize, long in
 
   if(daosconfig == 0){
 
-    daos_write_separate_arrays(arraysize, arraygsize, arraysubsize, arraystart, data, obj_class, block_size, keep_data, communicator);
+    daos_write_separate_arrays(num_dims, arraysize, arraygsize, arraysubsize, arraystart, data, obj_class, block_size, keep_data, communicator);
 
   }else if(daosconfig == 1){
+
+    daos_write_single_array(num_dims, arraysize, arraygsize, arraysubsize, arraystart, data, obj_class, block_size, keep_data, communicator);
 
   }else if(daosconfig == 2){
 
@@ -284,10 +290,9 @@ void daos_write_array_fortran(long int *arraysize, long int *arraygsize, long in
   
 }
 
-void daos_write_separate_arrays(long int *arraysize, long int *arraygsize, long int *arraysubsize, long int *arraystart, double *data, char *obj_class, size_t block_size, int keep_data, MPI_Comm communicator){
+void daos_write_separate_arrays(int num_dims, long int *arraysize, long int *arraygsize, long int *arraysubsize, long int *arraystart, double *data, char *obj_class, size_t block_size, int keep_data, MPI_Comm communicator){
 
-  //TODO Fragile, assumes some arrays are 3 elements long (i.e. for a 3d problem).
-  int ierr;
+  int ierr, i;
   int comm_rank;
   char array_name[100];
   daos_obj_id_t array_obj_id;
@@ -300,8 +305,6 @@ void daos_write_separate_arrays(long int *arraysize, long int *arraygsize, long 
   d_sg_list_t sgl;
   daos_range_t rg;
   d_iov_t iov;
-  char container_handle_string[37];
-  char array_uuid_string[37];
   
   MPI_Comm_rank(communicator, &comm_rank);
 
@@ -336,10 +339,10 @@ void daos_write_separate_arrays(long int *arraysize, long int *arraygsize, long 
     printf("array create failed with %d", ierr);
   }
 
-  total_size = arraysubsize[0];
-  total_size = total_size * arraysubsize[1];
-  total_size = total_size * arraysubsize[2];
-  total_size = total_size * sizeof(double);
+  total_size = sizeof(double);
+  for(i=0; i<num_dims; i++){
+    total_size = total_size * arraysubsize[i];
+  }
 
   iod.arr_nr = 1;
   rg.rg_len = total_size;
@@ -347,12 +350,12 @@ void daos_write_separate_arrays(long int *arraysize, long int *arraygsize, long 
   iod.arr_rgs = &rg;
   
   sgl.sg_nr = 1;
-  d_iov_set(&iov, data, total_size);
+  d_iov_set(&iov, &data[0], total_size);
   sgl.sg_iovs = &iov;
   
   ierr = daos_array_write(array_handle, DAOS_TX_NONE, &iod, &sgl, NULL);
   if(ierr != 0){
-    printf("Error writing array\n");
+    printf("Error writing array %d\n", ierr);
     perror("daos_array_write");
     MPI_Abort(communicator, 0);
   }
@@ -364,7 +367,6 @@ void daos_write_separate_arrays(long int *arraysize, long int *arraygsize, long 
       printf("Error closing array\n");
       perror("daos_array_close");
       MPI_Abort(communicator, 0);
-
     }
 
   }else{
@@ -382,10 +384,10 @@ void daos_write_separate_arrays(long int *arraysize, long int *arraygsize, long 
   
 }
 
-void daos_write_single_array(long int *arraysize, long int *arraygsize, long int *arraysubsize, long int *arraystart, double *data, char *obj_class, size_t block_size, int keep_data, MPI_Comm communicator){
+void daos_write_single_array(int num_dims, long int *arraysize, long int *arraygsize, long int *arraysubsize, long int *arraystart, double *data, char *obj_class, size_t block_size, int keep_data, MPI_Comm communicator){
 
   //TODO Fragile, assumes some arrays are 3 elements long (i.e. for a 3d problem).
-  int ierr;
+  int ierr, i, j, k, total_parts;
   int comm_rank;
   char array_name[100];
   daos_obj_id_t array_obj_id;
@@ -393,18 +395,20 @@ void daos_write_single_array(long int *arraysize, long int *arraygsize, long int
   uuid_t array_uuid;  
   daos_oclass_id_t array_obj_class;
   daos_handle_t array_handle;
-  size_t local_block_size, cell_size, total_size;
+  size_t local_block_size, cell_size, total_size, initial_offset, running_offset;
   daos_array_iod_t iod;
   d_sg_list_t sgl;
-  daos_range_t rg;
-  d_iov_t iov;
-  char container_handle_string[37];
-  char array_uuid_string[37];
+  daos_range_t *rg;
+  d_iov_t *iov;
   
   MPI_Comm_rank(communicator, &comm_rank);
   
-  strcat(array_name, "total-data");
+  //  strcpy(array_name, "total-data");
+  sprintf(array_name,"%d",comm_rank);
   
+  strcat(array_name, "-data");  
+
+
   array_obj_class = str_to_oc(obj_class);  
 
   array_obj_id.hi = 0;
@@ -420,52 +424,78 @@ void daos_write_single_array(long int *arraysize, long int *arraygsize, long int
    */ 
   daos_array_generate_oid(container_handle, &array_obj_id, true, array_obj_class, 0, 0);
 
-  if(comm_rank == 0){
       
-    ierr = daos_array_create(container_handle, array_obj_id, DAOS_TX_NONE, 1, block_size, &array_handle, NULL);
-
-    if (ierr == -1004) {
-      ierr = daos_array_open(container_handle, array_obj_id, DAOS_TX_NONE, DAOS_OO_RW, &cell_size, &local_block_size, &array_handle, NULL);
-      if (ierr != 0) {
-	printf("array open failed with %d", ierr);
-      }
-    } else if (ierr != 0) {
-      printf("array create failed with %d", ierr);
-    }    
+  ierr = daos_array_create(container_handle, array_obj_id, DAOS_TX_NONE, 1, block_size, &array_handle, NULL);
   
+  if (ierr == -1004) {
+    ierr = daos_array_open(container_handle, array_obj_id, DAOS_TX_NONE, DAOS_OO_RW, &cell_size, &local_block_size, &array_handle, NULL);
+    if (ierr != 0) {
+      printf("%d array open failed with %d\n", comm_rank, ierr);
+    }
+  } else if (ierr != 0) {
+    printf("%d array create failed with %d\n", comm_rank, ierr);
+  }    
+  
+    //  printf("%d sizes (%d %d %d) (%d %d %d) (%d %d %d) (%d %d %d)\n",comm_rank,arraysize[0],arraysize[1],arraysize[2],arraygsize[0],arraygsize[1],arraygsize[2],arraysubsize[0],arraysubsize[1],arraysubsize[2],arraystart[0],arraystart[1],arraystart[2]);
+
+  // iod variables (ranges) represent the position in the DAOS array (i.e. the DAOS array where the data will be stored)
+  // sgl variables (scatter/gather) represent the position in the source array (i.e. in memory array the data is coming from)
+
+  // Total number of items to be written is the combined size of the first two dimensions
+  total_parts =  arraysubsize[0]*arraysubsize[1];
+  iod.arr_nr = total_parts;
+
+  // Allocate an array of ranges to be populated
+  rg = (daos_range_t *)malloc(sizeof(daos_range_t)*total_parts);
+  // Setup the iod to link to that array of ranges
+  iod.arr_rgs = rg;
+
+  initial_offset = arraystart[0]*(arraygsize[1]*arraygsize[2]);
+  initial_offset = initial_offset + (arraystart[1]*arraygsize[2]);
+  initial_offset = initial_offset + arraystart[2];
+  initial_offset = initial_offset * sizeof(double);
+
+  running_offset = initial_offset;
+
+  // Populate the array of ranges
+  for(i=0; i<arraysubsize[0]; i++){
+    for(j=0; j<arraysubsize[1]; j++){
+      //      printf("%d Range target %d %d %d %d %d\n",comm_rank,i,j,(i*arraysubsize[1]+j),arraysubsize[2],running_offset/sizeof(double));
+      // rg_len is the amount of data to be written into the DAOS array for this operation
+      iod.arr_rgs[i*arraysubsize[1]+j].rg_len = arraysubsize[2]*sizeof(double);
+      // idx is the offset in the array where the data should be written
+      // In this case it's the offset in the global array of this local portion
+      iod.arr_rgs[i*arraysubsize[1]+j].rg_idx = running_offset;
+      running_offset = running_offset + (arraygsize[2]*sizeof(double));
+    }
+    running_offset = initial_offset + ((i+1)*(arraygsize[1]*arraygsize[2]*sizeof(double)));
+  }
+    
+  sgl.sg_nr = total_parts;
+  // Allocate an array of scatter/gathers to be populated
+  iov = (d_iov_t *)malloc(sizeof(d_iov_t)*total_parts);
+  sgl.sg_iovs = iov;
+
+  initial_offset = 0;
+
+  for(i=0; i<arraysubsize[0]; i++){
+    for(j=0; j<arraysubsize[1]; j++){
+      //      printf("%d SGL array position %d %d %d %d %d\n",comm_rank,i,j,(i*arraysubsize[1]+j),arraysubsize[2],initial_offset);
+      d_iov_set(&sgl.sg_iovs[i*arraysubsize[1]+j], &data[initial_offset], arraysubsize[2]*sizeof(double));
+      initial_offset = initial_offset + arraysubsize[2];
+    }
+  }
+
+  ierr = daos_array_write(array_handle, DAOS_TX_NONE, &iod, &sgl, NULL);
+  if(ierr != 0){
+    printf("Error writing array %d\n", ierr);
+    perror("daos_array_write");
+    MPI_Abort(communicator, 0);
   }
 
   MPI_Barrier(communicator);
 
-  if(comm_rank != 0){
-
-      ierr = daos_array_open(container_handle, array_obj_id, DAOS_TX_NONE, DAOS_OO_RW, &cell_size, &local_block_size, &array_handle, NULL);
-      if (ierr != 0) {
-	printf("array open failed with %d", ierr);
-      }
-
-  }
-
-  total_size = arraysubsize[0];
-  total_size = total_size * arraysubsize[1];
-  total_size = total_size * arraysubsize[2];
-  total_size = total_size * sizeof(double);
-
-  iod.arr_nr = 1;
-  rg.rg_len = total_size;
-  rg.rg_idx = 0;
-  iod.arr_rgs = &rg;
-  
-  sgl.sg_nr = 1;
-  d_iov_set(&iov, data, total_size);
-  sgl.sg_iovs = &iov;
-  
-  ierr = daos_array_write(array_handle, DAOS_TX_NONE, &iod, &sgl, NULL);
-  if(ierr != 0){
-    printf("Error writing array\n");
-    perror("daos_array_write");
-    MPI_Abort(communicator, 0);
-  }
+  //  printf("%d original data %lf %lf %lf %lf %lf %lf %lf %lf\n", comm_rank, data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7]);
 
   if(keep_data){
 
@@ -488,12 +518,15 @@ void daos_write_single_array(long int *arraysize, long int *arraygsize, long int
   
   }
 
+  free(rg);
+  free(iov);
+
   return;
   
 }
 
 
-void daos_read_array_fortran(long int *arraysize, long int *arraygsize, long int *arraysubsize, long int *arraystart, double *output_data, char *obj_class, int daosconfig, MPI_Fint communicator){
+void daos_read_array_fortran(int num_dims, long int *arraysize, long int *arraygsize, long int *arraysubsize, long int *arraystart, double *output_data, char *obj_class, int daosconfig, MPI_Fint communicator){
 
   MPI_Comm c_communicator;
 
@@ -501,9 +534,11 @@ void daos_read_array_fortran(long int *arraysize, long int *arraygsize, long int
 
   if(daosconfig == 0){
 
-    daos_read_separate_arrays(arraysize, arraygsize, arraysubsize, arraystart, output_data, obj_class, communicator);
+    daos_read_separate_arrays(num_dims, arraysize, arraygsize, arraysubsize, arraystart, output_data, obj_class, communicator);
 
   }else if(daosconfig == 1){
+
+    daos_read_single_array(num_dims, arraysize, arraygsize, arraysubsize, arraystart, output_data, obj_class, communicator);
 
   }else if(daosconfig == 2){
 
@@ -518,10 +553,10 @@ void daos_read_array_fortran(long int *arraysize, long int *arraygsize, long int
 }
 
 
-void daos_read_separate_arrays(long int *arraysize, long int *arraygsize, long int *arraysubsize, long int *arraystart, double *output_data, char *obj_class, MPI_Comm communicator){
+void daos_read_separate_arrays(int num_dims, long int *arraysize, long int *arraygsize, long int *arraysubsize, long int *arraystart, double *output_data, char *obj_class, MPI_Comm communicator){
 
   //TODO Fragile, assumes some arrays are 3 elements long (i.e. for a 3d problem).
-  int ierr;
+  int ierr, i;
   int comm_rank;
   char array_name[100];
   daos_obj_id_t array_obj_id;
@@ -561,10 +596,10 @@ void daos_read_separate_arrays(long int *arraysize, long int *arraygsize, long i
     printf("array open failed with %d", ierr);
   }
 
-  total_size = arraysubsize[0];
-  total_size = total_size * arraysubsize[1];
-  total_size = total_size * arraysubsize[2];
-  total_size = total_size * sizeof(double);
+  total_size = sizeof(double);
+  for(i=0; i<num_dims; i++){
+    total_size = total_size * arraysubsize[i];
+  }
  
   ierr = daos_array_get_size(array_handle, DAOS_TX_NONE, &array_size, NULL);
 
@@ -578,7 +613,7 @@ void daos_read_separate_arrays(long int *arraysize, long int *arraygsize, long i
   iod.arr_rgs = &rg;
   
   sgl.sg_nr = 1;
-  d_iov_set(&iov, output_data, total_size);
+  d_iov_set(&iov, &output_data[0], total_size);
   sgl.sg_iovs = &iov;
   
   ierr = daos_array_read(array_handle, DAOS_TX_NONE, &iod, &sgl, NULL);
@@ -599,31 +634,33 @@ void daos_read_separate_arrays(long int *arraysize, long int *arraygsize, long i
   
 }
 
-void daos_read_single_array(long int *arraysize, long int *arraygsize, long int *arraysubsize, long int *arraystart, double *output_data, char *obj_class, MPI_Comm communicator){
+void daos_read_single_array(int num_dims, long int *arraysize, long int *arraygsize, long int *arraysubsize, long int *arraystart, double *output_data, char *obj_class, MPI_Comm communicator){
 
   //TODO Fragile, assumes some arrays are 3 elements long (i.e. for a 3d problem).
-  int ierr;
+  int ierr, i, j, k, total_parts;
   int comm_rank;
   char array_name[100];
   daos_obj_id_t array_obj_id;
   uuid_t array_uuid;  
   daos_oclass_id_t array_obj_class;
   daos_handle_t array_handle;
-  size_t local_block_size, cell_size, total_size;
+  size_t local_block_size, cell_size, total_size, initial_offset, running_offset;
   daos_array_iod_t iod;
   daos_size_t array_size;
   d_sg_list_t sgl;
-  daos_range_t rg;
-  d_iov_t iov;
+  daos_range_t *rg;
+  d_iov_t *iov;
 
   MPI_Comm_rank(communicator, &comm_rank);
-
+  
   sprintf(array_name,"%d",comm_rank);
   
-  strcat(array_name, "-data"); 
+  strcat(array_name, "-data");
+
+  //  strcpy(array_name, "total-data");
   
   array_obj_class = str_to_oc(obj_class);  
-  
+
   array_obj_id.hi = 0;
   array_obj_id.lo = 0;
   
@@ -631,36 +668,63 @@ void daos_read_single_array(long int *arraysize, long int *arraygsize, long int 
 
   memcpy(&(array_obj_id.hi), &(array_uuid[0]) + sizeof(uint64_t), sizeof(uint64_t));
   memcpy(&(array_obj_id.lo), &(array_uuid[0]), sizeof(uint64_t));
-    
+  
   /*
-   * open array object
+   * create and open array object
    */ 
   daos_array_generate_oid(container_handle, &array_obj_id, true, array_obj_class, 0, 0);
-  
+      
   ierr = daos_array_open(container_handle, array_obj_id, DAOS_TX_NONE, DAOS_OO_RW, &cell_size, &local_block_size, &array_handle, NULL);
   if (ierr != 0) {
-    printf("array open failed with %d", ierr);
+    printf("%d array open failed with %d\n", comm_rank, ierr);
+  }  
+
+  // iod variables (ranges) represent the position in the DAOS array (i.e. the DAOS array where the data will be stored)
+  // sgl variables (scatter/gather) represent the position in the source array (i.e. in memory array the data is coming from)
+
+  // Total number of items to be written is the combined size of the first two dimensions
+  total_parts =  arraysubsize[0]*arraysubsize[1];
+  iod.arr_nr = total_parts;
+
+  // Allocate an array of ranges to be populated
+  rg = (daos_range_t *)malloc(sizeof(daos_range_t)*total_parts);
+  // Setup the iod to link to that array of ranges
+  iod.arr_rgs = rg;
+
+  initial_offset = arraystart[0]*(arraygsize[1]*arraygsize[2]);
+  initial_offset = initial_offset + (arraystart[1]*arraygsize[2]);
+  initial_offset = initial_offset + arraystart[2];
+  initial_offset = initial_offset * sizeof(double);
+
+  running_offset = initial_offset;
+
+  // Populate the array of ranges
+  for(i=0; i<arraysubsize[0]; i++){
+    for(j=0; j<arraysubsize[1]; j++){  
+      // rg_len is the amount of data to be written into the DAOS array for this operation
+      rg[i*arraysubsize[1]+j].rg_len = arraysubsize[2]*sizeof(double);
+      // idx is the offset in the array where the data should be written
+      // In this case it's the offset in the global array of this local portion
+      rg[i*arraysubsize[1]+j].rg_idx = running_offset;
+      running_offset = running_offset + (arraygsize[2]*sizeof(double));
+    }
+    running_offset = initial_offset + ((i+1)*arraygsize[1]*arraygsize[2]*sizeof(double));
   }
 
-  total_size = arraysubsize[0];
-  total_size = total_size * arraysubsize[1];
-  total_size = total_size * arraysubsize[2];
-  total_size = total_size * sizeof(double);
- 
-  ierr = daos_array_get_size(array_handle, DAOS_TX_NONE, &array_size, NULL);
+    
+  sgl.sg_nr = total_parts;
+  // Allocate an array of scatter/gathers to be populated
+  iov = (d_iov_t *)malloc(sizeof(d_iov_t)*total_parts);
+  sgl.sg_iovs = iov;
 
-  if(array_size != total_size){
-    printf("DAOS array sizes not the same as the calculated size %ld %ld\n", array_size, total_size);
+  initial_offset = 0;
+
+  for(i=0; i<arraysubsize[0]; i++){
+    for(j=0; j<arraysubsize[1]; j++){
+      d_iov_set(&iov[i*arraysubsize[1]+j], &output_data[initial_offset], arraysubsize[2]*sizeof(double));
+      initial_offset = initial_offset + arraysubsize[2];
+    }
   }
-
-  iod.arr_nr = 1;
-  rg.rg_len = total_size;
-  rg.rg_idx = 0;
-  iod.arr_rgs = &rg;
-  
-  sgl.sg_nr = 1;
-  d_iov_set(&iov, output_data, total_size);
-  sgl.sg_iovs = &iov;
   
   ierr = daos_array_read(array_handle, DAOS_TX_NONE, &iod, &sgl, NULL);
   if(ierr != 0){
@@ -675,12 +739,13 @@ void daos_read_single_array(long int *arraysize, long int *arraygsize, long int 
     perror("daos_array_destroy");
     MPI_Abort(communicator, 0);
   }
+
+  free(iov);
+  free(rg);
  
   return;
   
 }
-
-
 
 void daos_close_container(MPI_Comm communicator){
 
@@ -700,13 +765,23 @@ void daos_close_container(MPI_Comm communicator){
 void daos_destroy_container(MPI_Comm communicator){
 
   int ierr;
+  int comm_rank;
+  char container_string[37];
 
-  daos_cont_destroy(pool_handle, container_uuid, 1, NULL);
-  if(ierr != 0){
-    printf("Error destroying container\n");
-    perror("daos_destroy_container");
-    MPI_Abort(communicator, 0);
+  MPI_Comm_rank(communicator, &comm_rank);
+
+  MPI_Barrier(communicator);
+
+  if(comm_rank == 0){
+    ierr = daos_cont_destroy(pool_handle, container_name, 0, NULL);
+    if(ierr != 0){
+      printf("Error destroying container %d\n", ierr);
+      perror("daos_destroy_container");
+      MPI_Abort(communicator, 0);
+    }
   }
+
+  return;
 
 }
 

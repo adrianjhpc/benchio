@@ -270,5 +270,18 @@ contains
 
   end subroutine split_string
 
+  subroutine benchiofinal
+
+    implicit none
+    
+    integer :: ierr
+
+    call MPI_Comm_free(nodecomm, ierr)
+    call MPI_Comm_free(nodebosscomm, ierr)
+
+    call MPI_Finalize(ierr)
+
+  end subroutine benchiofinal
+
 end module
 
