@@ -436,8 +436,6 @@ void daos_write_single_array(int num_dims, long int *arraysize, long int *arrayg
     printf("%d array create failed with %d\n", comm_rank, ierr);
   }    
   
-    //  printf("%d sizes (%d %d %d) (%d %d %d) (%d %d %d) (%d %d %d)\n",comm_rank,arraysize[0],arraysize[1],arraysize[2],arraygsize[0],arraygsize[1],arraygsize[2],arraysubsize[0],arraysubsize[1],arraysubsize[2],arraystart[0],arraystart[1],arraystart[2]);
-
   // iod variables (ranges) represent the position in the DAOS array (i.e. the DAOS array where the data will be stored)
   // sgl variables (scatter/gather) represent the position in the source array (i.e. in memory array the data is coming from)
 
@@ -460,7 +458,6 @@ void daos_write_single_array(int num_dims, long int *arraysize, long int *arrayg
   // Populate the array of ranges
   for(i=0; i<arraysubsize[0]; i++){
     for(j=0; j<arraysubsize[1]; j++){
-      //      printf("%d Range target %d %d %d %d %d\n",comm_rank,i,j,(i*arraysubsize[1]+j),arraysubsize[2],running_offset/sizeof(double));
       // rg_len is the amount of data to be written into the DAOS array for this operation
       iod.arr_rgs[i*arraysubsize[1]+j].rg_len = arraysubsize[2]*sizeof(double);
       // idx is the offset in the array where the data should be written
@@ -480,7 +477,6 @@ void daos_write_single_array(int num_dims, long int *arraysize, long int *arrayg
 
   for(i=0; i<arraysubsize[0]; i++){
     for(j=0; j<arraysubsize[1]; j++){
-      //      printf("%d SGL array position %d %d %d %d %d\n",comm_rank,i,j,(i*arraysubsize[1]+j),arraysubsize[2],initial_offset);
       d_iov_set(&sgl.sg_iovs[i*arraysubsize[1]+j], &data[initial_offset], arraysubsize[2]*sizeof(double));
       initial_offset = initial_offset + arraysubsize[2];
     }
@@ -494,8 +490,6 @@ void daos_write_single_array(int num_dims, long int *arraysize, long int *arrayg
   }
 
   MPI_Barrier(communicator);
-
-  //  printf("%d original data %lf %lf %lf %lf %lf %lf %lf %lf\n", comm_rank, data[0], data[1], data[2], data[3], data[4], data[5], data[6], data[7]);
 
   if(keep_data){
 
