@@ -3,12 +3,13 @@ module adios
   use mpi
   use adios2
   use benchutil
+  use benchclock
 
   implicit none
 
 contains
 
-subroutine adioswrite(filename, iodata, n1, n2, n3, cartcomm)
+subroutine adioswrite(filename, iodata, n1, n2, n3, cartcomm, initialise_time)
 
 ! ADIOS variables
   type(adios2_adios) :: adios2obj
@@ -22,6 +23,8 @@ subroutine adioswrite(filename, iodata, n1, n2, n3, cartcomm)
   double precision, dimension(0:n1+1,0:n2+1,0:n3+1) :: iodata
   double precision, dimension(n1,n2,n3) :: out_data
 
+  double precision :: initialise_time, t0, t1
+
   integer*8, dimension(ndim) :: arraysize, arraystart
   integer*8, dimension(ndim) :: arraygsize, arraysubsize
 
@@ -32,8 +35,11 @@ subroutine adioswrite(filename, iodata, n1, n2, n3, cartcomm)
 
 
 ! initialise ADIOS using the MPI communicator and config file
+  t0 = benchtime()
   call adios2_init(adios2obj, "adios2.xml",cartcomm, ierr)
   call adios2_declare_io(io, adios2obj, 'Output', ierr )
+  t1 =  benchtime()
+  initialise_time = t1 - t0
         
   call MPI_Comm_size(cartcomm, size, ierr)
   call MPI_Comm_rank(cartcomm, rank, ierr)

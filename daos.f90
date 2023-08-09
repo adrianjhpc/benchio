@@ -4,12 +4,13 @@ module daos
   use mpi
   use daos_c_interface
   use benchutil
+  use benchclock
 
   implicit none
 
 contains
 
-subroutine daoswrite(filename, iodata, n1, n2, n3, cartcomm, daosconfig)
+subroutine daoswrite(filename, iodata, n1, n2, n3, cartcomm, daosconfig, initialise_time)
   
   implicit none
 
@@ -19,6 +20,8 @@ subroutine daoswrite(filename, iodata, n1, n2, n3, cartcomm, daosconfig)
   integer :: n1, n2, n3, daosconfig
   double precision, dimension(0:n1+1,0:n2+1,0:n3+1) :: iodata
   double precision, dimension(n1*n2*n3) :: out_data, read_data
+
+  double precision :: t0, t1, initialise_time
 
   integer*8, dimension(ndim) :: arraysize, arraystart
   integer*8, dimension(ndim) :: arraygsize, arraysubsize
@@ -58,6 +61,10 @@ subroutine daoswrite(filename, iodata, n1, n2, n3, cartcomm, daosconfig)
 
   call convert_to_c_string(trim(object_class), object_class_c)
 
+  if(rank == 0) then
+     write(*,*) 'DAOS Object Class ', trim(object_class)
+  end if
+
   arraysize(:) = [n1+2, n2+2, n3+2]
 
 ! Subtract halos for array subsize
@@ -72,7 +79,10 @@ subroutine daoswrite(filename, iodata, n1, n2, n3, cartcomm, daosconfig)
   out_data = pack(iodata(1:arraysubsize(1),1:arraysubsize(2),1:arraysubsize(3)),.true.)
 
 ! Open the pool and create a container
+  t0 = benchtime()
   call daos_initialise(pool_name_c, cartcomm)
+  t1 = benchtime()
+  initialise_time = t1 - t0
 
   blocksize = 1024*1024
 

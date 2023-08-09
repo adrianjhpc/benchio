@@ -4,9 +4,9 @@ program benchio
   use benchclock
   use mpiio
   use ioserial
- ! use iohdf5
- ! use ionetcdf
- ! use adios
+  use iohdf5
+  use ionetcdf
+  use adios
   use daos
 
   implicit none
@@ -24,7 +24,7 @@ program benchio
 
   logical :: reorder = .false.
 
-  double precision :: t0, t1, time, iorate, kibdata, mibdata, gibdata
+  double precision :: t0, t1, time, initialise_time, iorate, ioratenoinitialise, kibdata, mibdata, gibdata
   
   call benchioinit()
   
@@ -128,87 +128,94 @@ program benchio
         end if
         
         do istriping = 1, numstriping
+
+           if(dostripe(istriping)) then
            
-           filename = trim(stripestring(istriping))//'/'//trim(iolayername(iolayer))
-           suffix = ""
-           
-           iocomm = cartcomm
-           
-           ! Deal with multiple files
-           
-           if (iolayer == iolayermulti) then
-              iocomm = MPI_COMM_SELF
-              write(suffix,fmt="(i6.6)") rank
-           end if
-           
-           if (iolayer == iolayernode) then
-              iocomm = nodecomm
-              write(suffix,fmt="(i6.6)") nodenum
-           end if
-           
-           suffix = trim(suffix)//".dat"
-           filename = trim(filename)//suffix
-           
-           if (rank == 0) then
-              write(*,*) 'Writing to ', filename
-           end if
-           
-           call MPI_Barrier(comm, ierr)
-           t0 = benchtime()
-           
-           select case (iolayer)
+              filename = trim(stripestring(istriping))//'/'//trim(iolayername(iolayer))
+              suffix = ""
               
-           case(1:3)
-              call serialwrite(filename, iodata, n1, n2, n3, iocomm)
+              iocomm = cartcomm
               
-           case(4)
-              call mpiiowrite(filename, iodata, n1, n2, n3, iocomm)
+              ! Deal with multiple files
               
-           case(5)
-   !           call hdf5write(filename, iodata, n1, n2, n3, iocomm)
-              
-           case(6)
-   !           call netcdfwrite(filename, iodata, n1, n2, n3, iocomm)
-              
-           case(7)
-   !           call adioswrite(filename, iodata, n1, n2, n3, iocomm)
-              
-           case(8)
-              call daoswrite(filename, iodata, n1, n2, n3, iocomm, 1)
-              
-           case default
-              write(*,*) 'Illegal value of iolayer = ', iolayer
-              stop
-              
-           end select
-           
-           call MPI_Barrier(comm, ierr)
-           t1 = benchtime()
-           
-           time = t1 - t0
-           iorate = mibdata/time
-           
-           if (rank == 0) then
-              write(*,'(a,f10.2,a,f12.2,a)') 'time = ', time, ', rate = ', iorate, ' MiB/s'
-           end if
-           
-           ! Rank 0 in iocomm deletes
-           if (iolayer == 7) then
-              ! ADIOS makes a directory so the file deletion function will not work
-              ! use the shell instead
-              
-              call MPI_Barrier(comm, ierr)
-              if (rank == 0) then
-                 call execute_command_line("rm -r "//filename)
+              if (iolayer == iolayermulti) then
+                 iocomm = MPI_COMM_SELF
+                 write(suffix,fmt="(i6.6)") rank
               end if
-              call MPI_Barrier(comm, ierr)
               
-           else
-              call leaderdelete(filename, iocomm)
-           endif
+              if (iolayer == iolayernode) then
+                 iocomm = nodecomm
+                 write(suffix,fmt="(i6.6)") nodenum
+              end if
+              
+              suffix = trim(suffix)//".dat"
+              filename = trim(filename)//suffix
+              
+              if (rank == 0) then
+                 write(*,*) 'Writing to ', filename
+              end if
+              
+              initialise_time = 0.0
+              
+              call MPI_Barrier(comm, ierr)
+              t0 = benchtime()
+              
+              select case (iolayer)
+                 
+              case(1:3)
+                 call serialwrite(filename, iodata, n1, n2, n3, iocomm)
+                 
+              case(4)
+                 call mpiiowrite(filename, iodata, n1, n2, n3, iocomm)
+                 
+              case(5)
+                 call hdf5write(filename, iodata, n1, n2, n3, iocomm)
+                 
+              case(6)
+                 call netcdfwrite(filename, iodata, n1, n2, n3, iocomm)
+                 
+              case(7)
+                 call adioswrite(filename, iodata, n1, n2, n3, iocomm, initialise_time)
+                 
+              case(8)
+                 call daoswrite(filename, iodata, n1, n2, n3, iocomm, 1, initialise_time)
+                 
+              case default
+                 write(*,*) 'Illegal value of iolayer = ', iolayer
+                 stop
+                 
+              end select
+              
+              call MPI_Barrier(comm, ierr)
+              t1 = benchtime()
+              
+              time = t1 - t0
+              iorate = mibdata/time
+              ioratenoinitialise = mibdata/(time - initialise_time)
+              if (rank == 0) then
+                 write(*,'(a,f10.2,a,f12.2,a)') 'time = ', time, ', rate = ', iorate, ' MiB/s'
+                 write(*,'(a,f10.2,a,f12.2,a)') '(no initialise) time = ', time - initialise_time, ', rate = ', ioratenoinitialise, ' MiB/s'
+              end if
+              
+              ! Rank 0 in iocomm deletes
+              if (iolayer == 7) then
+                 ! ADIOS makes a directory so the file deletion function will not work
+                 ! use the shell instead
+                 
+                 call MPI_Barrier(comm, ierr)
+                 if (rank == 0) then
+                    call execute_command_line("rm -r "//filename)
+                 end if
+                 call MPI_Barrier(comm, ierr)
+                 
+              else
+                 call leaderdelete(filename, iocomm)
+              end if
+           
+           end if
 
         end do
-        
+                   
      end if
 
   end do
