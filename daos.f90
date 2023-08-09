@@ -13,7 +13,7 @@ subroutine daoswrite(filename, iodata, n1, n2, n3, cartcomm, daosconfig)
   
   implicit none
 
-  integer, parameter :: check_data = 1
+  integer, parameter :: check_data = 0
   character*(*) :: filename
   
   integer :: n1, n2, n3, daosconfig
@@ -29,8 +29,8 @@ subroutine daoswrite(filename, iodata, n1, n2, n3, cartcomm, daosconfig)
   integer, dimension(ndim) :: dims, coords
   logical, dimension(ndim) :: periods
   
-  character(len=5) :: object_class
-  character*(maxlen) :: object_type_name, pool_name
+  character(len=6) :: object_class, object_class_c
+  character*(maxlen) :: object_type_name, pool_name, pool_name_c
 
   call MPI_Comm_size(cartcomm, size, ierr)
   call MPI_Comm_rank(cartcomm, rank, ierr)
@@ -41,6 +41,8 @@ subroutine daoswrite(filename, iodata, n1, n2, n3, cartcomm, daosconfig)
   pool_name = char(0)
 
   call split_string(filename, object_type_name, pool_name, "/", delim_index)
+
+  call convert_to_c_string(trim(pool_name), pool_name_c)
 
   if(object_type_name(1:delim_index-1) == 'unstriped') then
      object_class =  "OC_S1"
@@ -54,6 +56,7 @@ subroutine daoswrite(filename, iodata, n1, n2, n3, cartcomm, daosconfig)
      return
   end if
 
+  call convert_to_c_string(trim(object_class), object_class_c)
 
   arraysize(:) = [n1+2, n2+2, n3+2]
 
@@ -69,7 +72,7 @@ subroutine daoswrite(filename, iodata, n1, n2, n3, cartcomm, daosconfig)
   out_data = pack(iodata(1:arraysubsize(1),1:arraysubsize(2),1:arraysubsize(3)),.true.)
 
 ! Open the pool and create a container
-  call daos_initialise(pool_name, cartcomm)
+  call daos_initialise(pool_name_c, cartcomm)
 
   blocksize = 1024*1024
 
@@ -96,7 +99,7 @@ subroutine daoswrite(filename, iodata, n1, n2, n3, cartcomm, daosconfig)
    
   end if
      
-  call daos_write(ndim, arraysize, arraygsize, arraysubsize, arraystart, out_data, object_class, blocksize, check_data, daosconfig, cartcomm)
+  call daos_write(ndim, arraysize, arraygsize, arraysubsize, arraystart, out_data, object_class_c, blocksize, check_data, daosconfig, cartcomm)
   
   if(check_data == 1) then
      
@@ -117,5 +120,23 @@ subroutine daoswrite(filename, iodata, n1, n2, n3, cartcomm, daosconfig)
   call daos_finish(cartcomm)
 
 end subroutine daoswrite
+
+subroutine convert_to_c_string(input_string, output_string)
+
+  use iso_c_binding, only: c_char, c_null_char
+
+  implicit none
+
+  character(len=*), intent(in) :: input_string
+  character(kind=c_char), dimension(*), intent(out) :: output_string
+  
+  integer :: i
+  
+  do i = 1, len(input_string)
+     output_string(i) = input_string(i:i)
+  end do
+  output_string(len(input_string)+1) = c_null_char
+  
+end subroutine convert_to_c_string
 
 end module daos
