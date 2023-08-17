@@ -32,7 +32,7 @@ subroutine daoswrite(filename, iodata, n1, n2, n3, cartcomm, daosconfig, initial
   integer, dimension(ndim) :: dims, coords
   logical, dimension(ndim) :: periods
   
-  character(len=6) :: object_class, object_class_c
+  character(len=7) :: object_class, object_class_c
   character*(maxlen) :: object_type_name, pool_name, pool_name_c
 
   call MPI_Comm_size(cartcomm, size, ierr)
@@ -50,7 +50,7 @@ subroutine daoswrite(filename, iodata, n1, n2, n3, cartcomm, daosconfig, initial
   if(object_type_name(1:delim_index-1) == 'unstriped') then
      object_class =  "OC_S1"
   else if(object_type_name(1:delim_index-1) == 'defstriped') then
-     object_class =  "OC_S2"
+     object_class =  "OC_S8"
   else if(object_type_name(1:delim_index-1) == 'striped') then
      object_class =  "OC_SX"
   else
@@ -99,7 +99,19 @@ subroutine daoswrite(filename, iodata, n1, n2, n3, cartcomm, daosconfig, initial
      
      else if(daosconfig == 2) then
         
-        write(*,*) 'DAOS single array separate rows/columns'
+        write(*,*) 'DAOS array separate rows/columns'
+
+     else if(daosconfig == 3) then
+        
+        write(*,*) 'DAOS separate objects'
+
+     else if(daosconfig == 4) then
+        
+        write(*,*) 'DAOS single object block'
+
+     else if(daosconfig == 5) then
+        
+        write(*,*) 'DAOS object separate rows/columns'
 
      else
 
@@ -109,7 +121,19 @@ subroutine daoswrite(filename, iodata, n1, n2, n3, cartcomm, daosconfig, initial
    
   end if
      
-  call daos_write(ndim, arraysize, arraygsize, arraysubsize, arraystart, out_data, object_class_c, blocksize, check_data, daosconfig, cartcomm)
+  if(daosconfig .ge. 0 .and. daosconfig .le. 2) then
+
+     call daos_write_array(ndim, arraysize, arraygsize, arraysubsize, arraystart, out_data, object_class_c, blocksize, check_data, daosconfig, cartcomm)
+
+  else if(daosconfig .ge. 3 .and. daosconfig .le. 5) then
+
+     call daos_write_object(ndim, arraysize, arraygsize, arraysubsize, arraystart, out_data, object_class_c, blocksize, check_data, daosconfig, cartcomm)
+
+  else
+
+     write(*,*) 'Problem with daosconfig parameter'
+
+  end if
   
   if(check_data == 1) then
      
@@ -117,8 +141,21 @@ subroutine daoswrite(filename, iodata, n1, n2, n3, cartcomm, daosconfig, initial
         write(*,*) 'checking data so do not trust the timings'
      end if
      
-     call daos_read(ndim, arraysize, arraygsize, arraysubsize, arraystart, read_data, object_class, daosconfig, cartcomm)
+     if(daosconfig .ge. 0 .and. daosconfig .le. 2) then
+
+        call daos_read_array(ndim, arraysize, arraygsize, arraysubsize, arraystart, read_data, object_class_c, daosconfig, cartcomm)
      
+     else if(daosconfig .ge. 3 .and. daosconfig .le. 5) then
+
+        call daos_read_object(ndim, arraysize, arraygsize, arraysubsize, arraystart, read_data, object_class_c, daosconfig, cartcomm)
+
+     else
+        
+        write(*,*) 'Problem with daosconfig parameter'
+        
+     end if
+
+
      if(.not. all(out_data .eq. read_data)) then
         write(*,*) rank,'original ',out_data,' read ',read_data
         write(*,*) rank,'out data and read data do not match'
@@ -126,8 +163,7 @@ subroutine daoswrite(filename, iodata, n1, n2, n3, cartcomm, daosconfig, initial
      
   end if
   
-  
-  call daos_finish(cartcomm)
+!  call daos_finish(cartcomm)
 
 end subroutine daoswrite
 

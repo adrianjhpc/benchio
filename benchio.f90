@@ -8,6 +8,7 @@ program benchio
   use ionetcdf
   use adios
   use daos
+  use daos_c_interface
 
   implicit none
 
@@ -131,6 +132,7 @@ program benchio
 
            if(dostripe(istriping)) then
            
+              !filename = 'daos:/mnt/dfuse/'//trim(stripestring(istriping))//'/'//trim(iolayername(iolayer))
               filename = trim(stripestring(istriping))//'/'//trim(iolayername(iolayer))
               suffix = ""
               
@@ -198,7 +200,12 @@ program benchio
               end if
               
               ! Rank 0 in iocomm deletes
-              if (iolayer == 7) then
+              if (iolayer == 4 .or. iolayer == 5 .or. iolayer == 6) then
+                 if (rank == 0) then
+                    call execute_command_line("rm -r /mnt/dfuse/"//trim(stripestring(istriping))//'/'//trim(iolayername(iolayer))//'.dat')
+                 end if
+                 call MPI_Barrier(comm, ierr)
+              else if (iolayer == 7) then
                  ! ADIOS makes a directory so the file deletion function will not work
                  ! use the shell instead
                  
@@ -208,6 +215,12 @@ program benchio
                  end if
                  call MPI_Barrier(comm, ierr)
                  
+              else if (iolayer == 8) then
+
+                 call daos_finish(iocomm)
+                 
+                 call daos_cleanup(iocomm)
+
               else
                  call leaderdelete(filename, iocomm)
               end if
