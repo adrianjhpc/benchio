@@ -1,0 +1,55 @@
+MF=	Makefile-ngio
+
+FC=mpif90
+FFLAGS=-ffree-line-length-none -O3 -I/home/daos-user/local/hdf5/include -I/usr/include/uuid
+LFFLAGS=-L/home/daos-user/local/hdf5/lib -lhdf5_hl -lhdf5 -lhdf5_fortran
+CC=mpicc
+CFLAGS=-I/usr/include/uuid
+LCFLAGS=-luuid -ldaos -ldaos_common #-L/home/nx01/nx01/adrianj/uuid/lib -luuid -ldaos
+
+
+
+EXE=	benchio
+
+FSRC= \
+	benchclock.f90 \
+        benchutil.f90 \
+	benchio.f90 \
+	mpiio.f90 \
+	serial.f90 \
+	hdf5.f90 \
+        daos_c_interface.f90 \
+	daos.f90 
+
+CSRC= \
+	daos_c.c 
+
+
+#
+# No need to edit below this line
+#
+.SUFFIXES:
+.SUFFIXES: .f90 .o .c
+
+FOBJ=    $(FSRC:.f90=.o)
+COBJ=   $(CSRC:.c=.o)
+
+.f90.o:
+	$(FC) $(FFLAGS) -c $<
+
+.c.o:
+	$(CC) $(CFLAGS) -c $<
+
+all:    $(EXE)
+
+$(EXE): $(FOBJ) $(COBJ)
+	$(FC) $(FFLAGS) -o $@ $(FOBJ) $(COBJ) $(LFFLAGS) $(LCFLAGS)
+
+$(FOBJ): $(MF)
+$(COBJ): $(MF)
+
+benchio.o: benchclock.o benchutil.o mpiio.o serial.o hdf5.o daos_c_interface.o daos.o daos_c.o 
+
+clean: 
+	rm -fr *.o *.mod benchio
+
