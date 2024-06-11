@@ -10,7 +10,9 @@ int initialised = 0;
 daos_handle_t pool_handle;
 daos_handle_t container_handle;
 uuid_t container_uuid;
-char *container_name = "benchio";
+
+#define MAX_CONT_NAME_LEN 255
+char container_name[MAX_CONT_NAME_LEN] = "";
 
 #define ERROR -1
 #define SUCCESS 0
@@ -19,8 +21,8 @@ char *container_name = "benchio";
 void communicate_daos_handles(MPI_Comm communicator);
 daos_oclass_id_t str_to_oc(char * in);
 void daos_close(daos_handle_t handle);
-void daos_initialise_fortran(char *pool_string, MPI_Fint communicator);
-void daos_initialise(char *pool_string, MPI_Comm communicator);
+void daos_initialise_fortran(char *pool_string, char *cont_string, MPI_Fint communicator);
+void daos_initialise(char *pool_string, char *cont_string, MPI_Comm communicator);
 void daos_write_array_fortran(int num_dims, long int *arraysize, long int *arraygsize, long int *arraysubsize, long int *arraystart, double *data, char *obj_class, size_t block_size, int keep_data, int daosconfig, MPI_Fint communicator);
 void daos_write_separate_arrays(int num_dims, long int *arraysize, long int *arraygsize, long int *arraysubsize, long int *arraystart, double *data, char *obj_class, size_t block_size, int keep_data, MPI_Comm communicator);
 void daos_write_single_array(int num_dims, long int *arraysize, long int *arraygsize, long int *arraysubsize, long int *arraystart, double *data, char *obj_class, size_t block_size, int keep_data, MPI_Comm communicator);

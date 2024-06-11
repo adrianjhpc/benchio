@@ -131,7 +131,11 @@ program benchio
            if(dostripe(istriping)) then
            
               !filename = 'daos:/mnt/dfuse/'//trim(stripestring(istriping))//'/'//trim(iolayername(iolayer))
-              filename = trim(stripestring(istriping))//'/'//trim(iolayername(iolayer))
+              if (iolayer == 8) then
+                 filename = trim(stripestring(istriping))//'/'//trim(ioparamval(1))
+              else
+                 filename = trim(stripestring(istriping))//'/'//trim(iolayername(iolayer))
+              end if
               suffix = ""
               
               iocomm = cartcomm
@@ -149,8 +153,10 @@ program benchio
               end if
               
               suffix = trim(suffix)//".dat"
-              filename = trim(filename)//suffix
-              
+              if (iolayer /= 8) then
+                 filename = trim(filename)//suffix
+              end if
+
               if (rank == 0) then
                  write(*,*) 'Writing to ', filename
               end if

@@ -17,10 +17,11 @@ module daos_c_interface
 
   interface
 
-     subroutine daos_initialise(pool_string, communicator) bind(c, name="daos_initialise_fortran")
+     subroutine daos_initialise(pool_string, cont_string, communicator) bind(c, name="daos_initialise_fortran")
        import :: c_char
        import :: c_int
        character(kind=c_char), dimension(*), intent(in) :: pool_string
+       character(kind=c_char), dimension(*), intent(in) :: cont_string
        integer(kind=c_int), value, intent(in) :: communicator
      end subroutine daos_initialise
 

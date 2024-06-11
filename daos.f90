@@ -10,12 +10,12 @@ module daos
 
 contains
 
-subroutine daoswrite(filename, iodata, n1, n2, n3, cartcomm, daosconfig, initialise_time)
+subroutine daoswrite(filename, iodata, n1, n2, n3, cartcomm, daosconfig, initialise_time, cont_name)
   
   implicit none
 
   integer, parameter :: check_data = 0
-  character*(*) :: filename
+  character*(*) :: filename, cont_name
   
   integer :: n1, n2, n3, daosconfig
   double precision, dimension(0:n1+1,0:n2+1,0:n3+1) :: iodata
@@ -33,7 +33,7 @@ subroutine daoswrite(filename, iodata, n1, n2, n3, cartcomm, daosconfig, initial
   logical, dimension(ndim) :: periods
   
   character(len=7) :: object_class, object_class_c
-  character*(maxlen) :: object_type_name, pool_name, pool_name_c
+  character*(maxlen) :: object_type_name, pool_name, pool_name_c, cont_name_c
 
   call MPI_Comm_size(cartcomm, size, ierr)
   call MPI_Comm_rank(cartcomm, rank, ierr)
@@ -46,6 +46,7 @@ subroutine daoswrite(filename, iodata, n1, n2, n3, cartcomm, daosconfig, initial
   call split_string(filename, object_type_name, pool_name, "/", delim_index)
 
   call convert_to_c_string(trim(pool_name), pool_name_c)
+  call convert_to_c_string(trim(cont_name), cont_name_c)
 
   if(object_type_name(1:delim_index-1) == 'unstriped') then
      object_class =  "OC_S1"
@@ -80,7 +81,7 @@ subroutine daoswrite(filename, iodata, n1, n2, n3, cartcomm, daosconfig, initial
 
 ! Open the pool and create a container
   t0 = benchtime()
-  call daos_initialise(pool_name_c, cartcomm)
+  call daos_initialise(pool_name_c, cont_name_c, cartcomm)
   t1 = benchtime()
   initialise_time = t1 - t0
 

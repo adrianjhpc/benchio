@@ -7,9 +7,11 @@ module benchutil
   integer :: iolayermulti, iolayernode
   integer, parameter :: numiolayer = 8
   integer, parameter :: numstriping = 3
+  integer, parameter :: numioparam = 2
   integer, parameter :: maxlen = 64
   integer, parameter :: ndim = 3
   character*(maxlen), dimension(numiolayer)  :: iostring, iolayername
+  character*(maxlen), dimension(numioparam)  :: ioparam, ioparamval
   character*(maxlen), dimension(numstriping) :: stripestring
 
   logical, dimension(numiolayer)  :: doio = .false.
@@ -25,6 +27,7 @@ module benchutil
 
   logical :: globalflag = .false.
   logical :: ioflag = .false.
+  logical :: ioparamflag = .false.
   logical :: stripeflag = .false.
 
   integer, parameter :: n1def = 128
@@ -50,6 +53,7 @@ contains
     character*(MPI_MAX_PROCESSOR_NAME) :: nodename
     integer :: colour, key, namelen, tag
     integer, dimension(MPI_STATUS_SIZE) :: status
+    character*(maxlen) :: pool_name, cont_name
 
     iolayermulti = 2
     iolayernode  = 3 
@@ -71,6 +75,12 @@ contains
     iolayername(6) = 'netcdf'
     iolayername(7) = 'adios'
     iolayername(8) = 'daos'
+
+    ioparam(1) = '--daos.pool'
+    ioparam(2) = '--daos.cont'
+
+    ioparamval(1) = 'daos'
+    ioparamval(2) = 'benchio'
     
     stripestring(1) = 'unstriped'
     stripestring(2) = 'striped'
@@ -182,7 +192,7 @@ contains
 
     implicit none
   
-    integer :: ierr, numargs, iarg, iolayer, istriping
+    integer :: ierr, numargs, iarg, iargstep, iolayer, ioparami, istriping
     character*(maxlen) :: argstring
 
     ! Parse the arguments
@@ -194,7 +204,7 @@ contains
     if (numargs < 4) then
        if (rank == 0) then
           write(*,*) "usage: benchio (n1, n2, n3) (local|global) [serial] [proc] [node]"
-          write(*,*) "       [mpiio] [hdf5] [netcdf] [adios] [daos] [unstriped] [striped] [fullstriped]"
+          write(*,*) "       [mpiio] [hdf5] [netcdf] [adios] [daos [--daos.pool <pool_name>] [--daos.cont <cont_name>]] [unstriped] [striped] [fullstriped]"
        end if
        
        call MPI_Finalize(ierr)
@@ -214,9 +224,12 @@ contains
     call get_command_argument(4, argstring)
     if (argstring == "local") globalflag = .false.
     
-    do iarg = 5, numargs
+    iarg = 5
+    do while(iarg <= numargs)
        ioflag = .false.
-       stripeflag = .false.       
+       stripeflag = .false.
+       ioparamflag = .false.
+       iargstep = 1
        
        call get_command_argument(iarg, argstring)      
 
@@ -224,6 +237,14 @@ contains
           if (iolayername(iolayer) == argstring) then
              ioflag = .true.
              doio(iolayer) = .true.
+          end if
+       end do
+
+       do ioparami = 1, numioparam
+          if (ioparam(ioparami) == argstring) then
+             ioparamflag = .true.
+             iargstep = 2
+             call get_command_argument(iarg + 1, ioparamval(ioparami))
           end if
        end do
        
@@ -234,11 +255,13 @@ contains
           end if
        end do
        
-       if (.not.ioflag .and. .not.stripeflag) then        
+       if (.not.ioflag .and. .not.stripeflag .and. .not.ioparamflag) then        
           write(*,*) "Illegal argument: ", argstring
           call MPI_Finalize(ierr)
           stop           
        end if
+
+       iarg = iarg + iargstep
     end do
     
     ! Check defaults
