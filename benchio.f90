@@ -132,9 +132,12 @@ program benchio
            
               !filename = 'daos:/mnt/dfuse/'//trim(stripestring(istriping))//'/'//trim(iolayername(iolayer))
               if (iolayer == 8) then
-                 filename = trim(stripestring(istriping))//'/'//trim(ioparamval(1))
+                 filename = trim(stripestring(istriping))//'/'//trim(ioparamval(2))
               else
-                 filename = trim(stripestring(istriping))//'/'//trim(iolayername(iolayer))
+                 filename = trim(ioparamval(1))
+                 if (filename == '') then
+                    filename = trim(stripestring(istriping))//'/'//trim(iolayername(iolayer))
+                 end if
               end if
               suffix = ""
               
@@ -184,7 +187,7 @@ program benchio
               !   call adioswrite(filename, iodata, n1, n2, n3, iocomm, initialise_time)
                  
               case(8)
-                 call daoswrite(filename, iodata, n1, n2, n3, iocomm, 1, initialise_time, trim(ioparamval(2)))
+                 call daoswrite(filename, iodata, n1, n2, n3, iocomm, 1, initialise_time, trim(ioparamval(3)))
                  
               case default
                  write(*,*) 'Illegal value of iolayer = ', iolayer

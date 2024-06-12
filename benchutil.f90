@@ -7,7 +7,7 @@ module benchutil
   integer :: iolayermulti, iolayernode
   integer, parameter :: numiolayer = 8
   integer, parameter :: numstriping = 3
-  integer, parameter :: numioparam = 2
+  integer, parameter :: numioparam = 3
   integer, parameter :: maxlen = 64
   integer, parameter :: ndim = 3
   character*(maxlen), dimension(numiolayer)  :: iostring, iolayername
@@ -76,11 +76,13 @@ contains
     iolayername(7) = 'adios'
     iolayername(8) = 'daos'
 
-    ioparam(1) = '--daos.pool'
-    ioparam(2) = '--daos.cont'
+    ioparam(1) = '--file'
+    ioparam(2) = '--daos.pool'
+    ioparam(3) = '--daos.cont'
 
-    ioparamval(1) = 'daos'
-    ioparamval(2) = 'benchio'
+    ioparamval(1) = ''
+    ioparamval(2) = 'daos'
+    ioparamval(3) = 'benchio'
     
     stripestring(1) = 'unstriped'
     stripestring(2) = 'striped'
@@ -204,7 +206,9 @@ contains
     if (numargs < 4) then
        if (rank == 0) then
           write(*,*) "usage: benchio (n1, n2, n3) (local|global) [serial] [proc] [node]"
-          write(*,*) "       [mpiio] [hdf5] [netcdf] [adios] [daos [--daos.pool <pool_name>] [--daos.cont <cont_name>]] [unstriped] [striped] [fullstriped]"
+          write(*,*) "       [mpiio] [hdf5] [netcdf] [adios] [--file <file_name>] "
+          write(*,*) "       [daos [--daos.pool <pool_name>] [--daos.cont <cont_name>]]"
+          write(*,*) "       [unstriped] [striped] [fullstriped]"
        end if
        
        call MPI_Finalize(ierr)
