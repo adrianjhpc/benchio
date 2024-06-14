@@ -12,6 +12,7 @@ LCFLAGS=-L/home/nx01/nx01/adrianj/uuid/lib -luuid
 EXE=	benchio
 
 SRC= \
+        benchutil.f90 \
 	benchio.f90 \
 	mpiio.f90 \
 	netcdf.f90 \
