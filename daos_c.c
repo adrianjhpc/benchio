@@ -337,7 +337,7 @@ void daos_write_separate_arrays(int num_dims, long int *arraysize, long int *arr
   iod.arr_rgs = &rg;
   
   sgl.sg_nr = 1;
-  d_iov_set(&iov, &data[0], total_size*sizeof(double));
+  d_iov_set(&iov, &data[0], total_size);
   sgl.sg_iovs = &iov;
   
   ierr = daos_array_write(array_handle, DAOS_TX_NONE, &iod, &sgl, NULL);
