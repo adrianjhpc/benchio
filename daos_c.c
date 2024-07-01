@@ -24,6 +24,8 @@ daos_oclass_id_t str_to_oc(char * in) {
     set = 1;
   }else if (strcmp(in, "OC_SX") == 0) {
     oc = OC_SX;
+    //if redundancy factor = 2
+    //oc = OC_RP_2GX;
     set = 1;
   }
   if (set == 0) printf("Did not find a valid object class, the provided string was %s\n", in);
@@ -330,9 +332,13 @@ void daos_write_separate_arrays(int num_dims, long int *arraysize, long int *arr
     ierr = daos_array_open(container_handle, array_obj_id, DAOS_TX_NONE, DAOS_OO_RW, &cell_size, &local_block_size, &array_handle, NULL);
     if (ierr != 0) {
       printf("array open failed with %d", ierr);
+      perror("daos_array_open");
+      MPI_Abort(communicator, 0);
     }
   } else if (ierr != 0) {
     printf("array create failed with %d", ierr);
+    perror("daos_array_create");
+    MPI_Abort(communicator, 0);
   }
 
   total_size = sizeof(double);
@@ -346,9 +352,9 @@ void daos_write_separate_arrays(int num_dims, long int *arraysize, long int *arr
   iod.arr_rgs = &rg;
   
   sgl.sg_nr = 1;
-  d_iov_set(&iov, &data[0], total_size*sizeof(double));
+  d_iov_set(&iov, &data[0], total_size);
   sgl.sg_iovs = &iov;
-  
+
   ierr = daos_array_write(array_handle, DAOS_TX_NONE, &iod, &sgl, NULL);
   if(ierr != 0){
     printf("Error writing array %d\n", ierr);

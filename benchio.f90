@@ -187,7 +187,7 @@ program benchio
               !   call adioswrite(filename, iodata, n1, n2, n3, iocomm, initialise_time)
                  
               case(8)
-                 call daoswrite(filename, iodata, n1, n2, n3, iocomm, 1, initialise_time, trim(ioparamval(3)))
+                 call daoswrite(filename, iodata, n1, n2, n3, iocomm, 0, initialise_time, trim(ioparamval(3)))
                  
               case default
                  write(*,*) 'Illegal value of iolayer = ', iolayer

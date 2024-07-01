@@ -1,10 +1,10 @@
 MF=	Makefile-ngio
 
 FC=mpif90
-FFLAGS=-ffree-line-length-none -O3 -I/home/daos-user/local/hdf5/include -I/usr/include/uuid
+FFLAGS=-g -ffree-line-length-none -I/home/daos-user/local/hdf5/include -I/usr/include/uuid
 LFFLAGS=-L/home/daos-user/local/hdf5/lib -lhdf5_hl -lhdf5 -lhdf5_fortran
 CC=mpicc
-CFLAGS=-I/usr/include/uuid
+CFLAGS=-g -I/usr/include/uuid
 LCFLAGS=-luuid -ldaos -ldaos_common #-L/home/nx01/nx01/adrianj/uuid/lib -luuid -ldaos
 
 
