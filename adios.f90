@@ -39,10 +39,6 @@ subroutine adioswrite(filename, iodata, n1, n2, n3, repeats, cartcomm, initialis
   call adios2_init(adios2obj, "adios2.xml", cartcomm, ierr)
   call adios2_declare_io(io, adios2obj, 'Output', ierr )
 
-  call adios2_set_engine(io, 'BP5', ierr)
-
-  call adios2_set_parameter(io, "AppendAfterSteps", "0", ierr)
-
   t1 =  benchtime()
   initialise_time = t1 - t0
         
@@ -64,19 +60,21 @@ subroutine adioswrite(filename, iodata, n1, n2, n3, repeats, cartcomm, initialis
 ! Get a copy of the array with the halos removed
   out_data = iodata(1:arraysubsize(1),1:arraysubsize(2),1:arraysubsize(3))
 
-! Open the file
-  call adios2_open (bp_writer, io, filename, adios2_mode_append, ierr)
-
 
 ! Define the global array
   call adios2_define_variable(var_g, io, "GlobalArray", adios2_type_dp, &
                               ndim, arraygsize, arraystart, arraysubsize, &
                               adios2_constant_dims, ierr)
 
-! Begin ouput step
-!  call adios2_begin_step( bp_writer, ierr)
-
+! The approach used here is not ideal as it requires multiple file opens and
+! closes if there are any repeats. However, ADIOS2 does not allow overwriting
+! data in the file if you write multiple times (i.e. call put more than once) so
+! doing I/O with repeats would end up with a file/storage output that would be 
+! repeats times larger than other benchmarks. The alternative, as we are doing
+! here, is to open and close the files each time and that overwrites the data.
   do repeat = 1, repeats
+
+  call adios2_open (bp_writer, io, filename, adios2_mode_write, ierr)
 
   call adios2_begin_step( bp_writer, ierr)
  
@@ -84,14 +82,9 @@ subroutine adioswrite(filename, iodata, n1, n2, n3, repeats, cartcomm, initialis
 
   call adios2_end_step(bp_writer, ierr)
 
-  end do
-
-! End the output
-!  call adios2_end_step(bp_writer, ierr)
-
-
-! Close the file
   call adios2_close(bp_writer, ierr)
+
+  end do
 
   call adios2_finalize(adios2obj, ierr)
 
