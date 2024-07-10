@@ -196,22 +196,6 @@ subroutine adiosread(filename, iodata, n1, n2, n3, cartcomm, initialise_time)
     return
   end if
 
-  if(all(iodata(1:arraysubsize(1),1:arraysubsize(2),1:arraysubsize(3)) .ne. in_data)) then
-     if(rank .eq. 0) then
-         write(*,*) 'Error with read data'
-         do k = 1, arraysubsize(3)
-             do j = 1, arraysubsize(2)
-                 do i = 1, arraysubsize(1)
-                     if(iodata(i,j,k) .ne. in_data(i,j,k)) then
-                         write(*,*) iodata(i,j,k),' ',in_data(i,j,k)
-                         return
-                     end if
-                  end do
-             end do
-         end do
-     end if
-     return
-  end if
 ! Copy the data back
   iodata(1:arraysubsize(1),1:arraysubsize(2),1:arraysubsize(3)) = in_data
 
