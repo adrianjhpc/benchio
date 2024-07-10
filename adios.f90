@@ -9,7 +9,7 @@ module adios
 
 contains
 
-subroutine adioswrite(filename, iodata, n1, n2, n3, cartcomm, initialise_time)
+subroutine adioswrite(filename, iodata, n1, n2, n3, repeats, cartcomm, initialise_time)
 
 ! ADIOS variables
   type(adios2_adios) :: adios2obj
@@ -19,7 +19,7 @@ subroutine adioswrite(filename, iodata, n1, n2, n3, cartcomm, initialise_time)
   
   character*(*) :: filename
   
-  integer :: n1, n2, n3
+  integer :: n1, n2, n3, repeats
   double precision, dimension(0:n1+1,0:n2+1,0:n3+1) :: iodata
   double precision, dimension(n1,n2,n3) :: out_data
 
@@ -28,7 +28,7 @@ subroutine adioswrite(filename, iodata, n1, n2, n3, cartcomm, initialise_time)
   integer*8, dimension(ndim) :: arraysize, arraystart
   integer*8, dimension(ndim) :: arraygsize, arraysubsize
 
-  integer :: cartcomm, ierr, rank, size
+  integer :: cartcomm, ierr, rank, size, repeat
 
   integer, dimension(ndim) :: dims, coords
   logical, dimension(ndim) :: periods
@@ -38,6 +38,11 @@ subroutine adioswrite(filename, iodata, n1, n2, n3, cartcomm, initialise_time)
   t0 = benchtime()
   call adios2_init(adios2obj, "adios2.xml", cartcomm, ierr)
   call adios2_declare_io(io, adios2obj, 'Output', ierr )
+
+  call adios2_set_engine(io, 'BP5', ierr)
+
+  call adios2_set_parameter(io, "AppendAfterSteps", "0", ierr)
+
   t1 =  benchtime()
   initialise_time = t1 - t0
         
@@ -60,7 +65,8 @@ subroutine adioswrite(filename, iodata, n1, n2, n3, cartcomm, initialise_time)
   out_data = iodata(1:arraysubsize(1),1:arraysubsize(2),1:arraysubsize(3))
 
 ! Open the file
-  call adios2_open (bp_writer, io, filename, adios2_mode_write, ierr)
+  call adios2_open (bp_writer, io, filename, adios2_mode_append, ierr)
+
 
 ! Define the global array
   call adios2_define_variable(var_g, io, "GlobalArray", adios2_type_dp, &
@@ -68,12 +74,21 @@ subroutine adioswrite(filename, iodata, n1, n2, n3, cartcomm, initialise_time)
                               adios2_constant_dims, ierr)
 
 ! Begin ouput step
-  call adios2_begin_step( bp_writer, ierr)
+!  call adios2_begin_step( bp_writer, ierr)
 
-  call adios2_put( bp_writer, var_g, out_data, ierr)
+  do repeat = 1, repeats
+
+  call adios2_begin_step( bp_writer, ierr)
+ 
+      call adios2_put( bp_writer, var_g, out_data, ierr)
+
+  call adios2_end_step(bp_writer, ierr)
+
+  end do
 
 ! End the output
-  call adios2_end_step(bp_writer, ierr)
+!  call adios2_end_step(bp_writer, ierr)
+
 
 ! Close the file
   call adios2_close(bp_writer, ierr)
@@ -84,7 +99,7 @@ subroutine adioswrite(filename, iodata, n1, n2, n3, cartcomm, initialise_time)
 end subroutine adioswrite
 
 
-subroutine adiosread(filename, iodata, n1, n2, n3, cartcomm, initialise_time)
+subroutine adiosread(filename, iodata, n1, n2, n3, repeats, cartcomm, initialise_time)
 
 ! ADIOS variables
   type(adios2_adios) :: adios2obj
@@ -94,7 +109,7 @@ subroutine adiosread(filename, iodata, n1, n2, n3, cartcomm, initialise_time)
   
   character*(*) :: filename
   
-  integer :: n1, n2, n3
+  integer :: n1, n2, n3, repeats
   integer :: i, j, k
   double precision, dimension(0:n1+1,0:n2+1,0:n3+1) :: iodata
   double precision, dimension(n1,n2,n3) :: in_data
@@ -104,7 +119,7 @@ subroutine adiosread(filename, iodata, n1, n2, n3, cartcomm, initialise_time)
   integer*8, dimension(ndim) :: arraysize, arraystart
   integer*8, dimension(ndim) :: arraygsize, arraysubsize
 
-  integer :: cartcomm, ierr, rank, size
+  integer :: cartcomm, ierr, rank, size, repeat
 
   integer, dimension(ndim) :: dims, coords
   logical, dimension(ndim) :: periods
@@ -170,11 +185,15 @@ subroutine adiosread(filename, iodata, n1, n2, n3, cartcomm, initialise_time)
     return
   end if
 
-  call adios2_get(bp_reader, var_g, in_data, ierr)
-  if(ierr .ne. 0) then
-    write(*,*) 'Error with adios2_get'
-    return
-  end if
+  do repeat = 1, repeats
+
+      call adios2_get(bp_reader, var_g, in_data, ierr)
+      if(ierr .ne. 0) then
+        write(*,*) 'Error with adios2_get'
+        return
+      end if
+
+  end do
 
 ! End the output
   call adios2_end_step(bp_reader, ierr)

@@ -7,17 +7,17 @@ module mpiio
 
 contains
 
-subroutine mpiiowrite(filename, iodata, n1, n2, n3, cartcomm)
+subroutine mpiiowrite(filename, iodata, n1, n2, n3, repeats, cartcomm)
 
   character*(*) :: filename
   
-  integer :: n1, n2, n3
+  integer :: n1, n2, n3, repeats
   double precision, dimension(0:n1+1,0:n2+1,0:n3+1) :: iodata
 
   integer, dimension(ndim) :: arraysize, arraystart
   integer, dimension(ndim) :: arraygsize, arraysubsize
 
-  integer :: cartcomm, ierr, rank, size
+  integer :: cartcomm, ierr, rank, size, repeat
 
   integer :: filetype, mpi_subarray, fh
   integer (kind=MPI_OFFSET_KIND) :: disp = 0
@@ -77,19 +77,19 @@ subroutine mpiiowrite(filename, iodata, n1, n2, n3, cartcomm)
 !
 !  Set view for this process using appropriate datatype
 !
-
-  call MPI_File_set_view(fh, disp, MPI_DOUBLE_PRECISION, filetype, 'native', &
-                         MPI_INFO_NULL, ierr)
-  if (ierr /= MPI_SUCCESS) write(*,*) 'View error on rank ', rank
-
 !
 !  Write all the data for this process.
 !  Remove halo data by passing an MPI subarray type
 !
 
-  call MPI_File_write_all(fh, iodata, 1, mpi_subarray, status, ierr)
+  do repeat = 1, repeats
+      call MPI_File_set_view(fh, disp, MPI_DOUBLE_PRECISION, filetype, 'native', &
+                             MPI_INFO_NULL, ierr)
+      if (ierr /= MPI_SUCCESS) write(*,*) 'View error on rank ', rank
+      call MPI_File_write_all(fh, iodata, 1, mpi_subarray, status, ierr)
+      if (ierr /= MPI_SUCCESS) write(*,*) 'Write error on rank ', rank
+  end do
 
-  if (ierr /= MPI_SUCCESS) write(*,*) 'Write error on rank ', rank
 
 !  Alternative: remove halo data by passing an explicit Fortran subarray
 !  This should give an identical file to the above call with mpi_subaray
@@ -113,17 +113,17 @@ subroutine mpiiowrite(filename, iodata, n1, n2, n3, cartcomm)
 
 end subroutine mpiiowrite
 
-subroutine mpiioread(filename, iodata, n1, n2, n3, cartcomm)
+subroutine mpiioread(filename, iodata, n1, n2, n3, repeats, cartcomm)
 
   character*(*) :: filename
   
-  integer :: n1, n2, n3
+  integer :: n1, n2, n3, repeats
   double precision, dimension(0:n1+1,0:n2+1,0:n3+1) :: iodata
 
   integer, dimension(ndim) :: arraysize, arraystart
   integer, dimension(ndim) :: arraygsize, arraysubsize
 
-  integer :: cartcomm, ierr, rank, size
+  integer :: cartcomm, ierr, rank, size, repeat
 
   integer :: filetype, mpi_subarray, fh
   integer (kind=MPI_OFFSET_KIND) :: disp = 0
@@ -183,19 +183,19 @@ subroutine mpiioread(filename, iodata, n1, n2, n3, cartcomm)
 !
 !  Set view for this process using appropriate datatype
 !
-
-  call MPI_File_set_view(fh, disp, MPI_DOUBLE_PRECISION, filetype, 'native', &
-                         MPI_INFO_NULL, ierr)
-  if (ierr /= MPI_SUCCESS) write(*,*) 'View error on rank ', rank
-
 !
 !  Read all the data for this process.
 !  Remove halo data by passing an MPI subarray type
 !
 
-  call MPI_File_read_all(fh, iodata, 1, mpi_subarray, status, ierr)
+  do repeat = 1, repeats
+      call MPI_File_set_view(fh, disp, MPI_DOUBLE_PRECISION, filetype, 'native', &
+                         MPI_INFO_NULL, ierr)
+     if (ierr /= MPI_SUCCESS) write(*,*) 'View error on rank ', rank
 
-  if (ierr /= MPI_SUCCESS) write(*,*) 'Read error on rank ', rank
+     call MPI_File_read_all(fh, iodata, 1, mpi_subarray, status, ierr)
+     if (ierr /= MPI_SUCCESS) write(*,*) 'Read error on rank ', rank
+  end do
 
 !  Alternative: remove halo data by passing an explicit Fortran subarray
 !  This should give an identical file to the above call with mpi_subaray

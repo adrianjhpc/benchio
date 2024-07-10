@@ -22,6 +22,7 @@ module benchutil
 
   integer :: rank, size, comm, cartcomm, iocomm, dblesize
   integer :: nodecomm, nodebosscomm, nodenum
+  integer :: repeats
 
   integer, dimension(ndim) :: dims, coords
   logical, dimension(ndim) :: periods = (/.false., .false., .false./)
@@ -217,7 +218,7 @@ contains
     
     if (numargs < 4) then
        if (rank == 0) then
-          write(*,*) "usage: benchio (n1, n2, n3) (local|global) [write] [read]"
+          write(*,*) "usage: benchio (n1, n2, n3) (repeats) (local|global) [write] [read]"
           write(*,*) "       [serial] [proc] [node] [mpiio]"
           write(*,*) "       [mpiio] [hdf5] [netcdf] [adios] [--file <file_name>] "
           write(*,*) "       [daos [--daos.pool <pool_name>] [--daos.cont <cont_name>]]"
@@ -236,12 +237,15 @@ contains
     call get_command_argument(3, argstring)
     read(argstring,*) n3
     
+    call get_command_argument(4, argstring)
+    read(argstring,*) repeats
+
     globalflag = .true.
     
-    call get_command_argument(4, argstring)
+    call get_command_argument(5, argstring)
     if (argstring == "local") globalflag = .false.
     
-    iarg = 5
+    iarg = 6
     do while(iarg <= numargs)
        modeflag = .false.
        ioflag = .false.

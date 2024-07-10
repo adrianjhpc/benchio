@@ -8,11 +8,11 @@ module iohdf5
 
 contains
 
-subroutine hdf5write(filename, iodata, n1, n2, n3, cartcomm)
+subroutine hdf5write(filename, iodata, n1, n2, n3, repeats, cartcomm)
 
   character*(*) :: filename
   
-  integer :: n1, n2, n3
+  integer :: n1, n2, n3, repeats
   double precision, dimension(0:n1+1,0:n2+1,0:n3+1) :: iodata
 
   integer :: info = MPI_INFO_NULL
@@ -32,7 +32,7 @@ subroutine hdf5write(filename, iodata, n1, n2, n3, cartcomm)
   integer, dimension(ndim) :: arraysize, arraystart
   integer, dimension(ndim) :: arraygsize, arraysubsize
 
-  integer :: cartcomm, ierr, rank, size
+  integer :: cartcomm, ierr, rank, size, repeat
 
   integer, dimension(ndim) :: dims, coords
   logical, dimension(ndim) :: periods
@@ -101,9 +101,12 @@ subroutine hdf5write(filename, iodata, n1, n2, n3, cartcomm)
   CALL h5pset_dxpl_mpio_f(plist_id, H5FD_MPIO_COLLECTIVE_F, ierr)
   
   ! Write the dataset collectively. 
-  CALL h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, iodata(1:n1, 1:n2, 1:n3), &
-       dimsf, ierr, file_space_id = filespace, mem_space_id = memspace, &
-      xfer_prp = plist_id)
+  do repeat = 1, repeats
+      CALL h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, iodata(1:n1, 1:n2, 1:n3), &
+           dimsf, ierr, file_space_id = filespace, mem_space_id = memspace, &
+           xfer_prp = plist_id)
+  end do
+
 ! Write the dataset independently. Comment out the collective
 ! and use the following call to investigate non-collective performance.
 !    CALL h5dwrite_f(dset_id, H5T_NATIVE_DOUBLE, data, arraygsize, ierr, &
@@ -125,11 +128,11 @@ subroutine hdf5write(filename, iodata, n1, n2, n3, cartcomm)
 
 end subroutine hdf5write
 
-subroutine hdf5read(filename, iodata, n1, n2, n3, cartcomm)
+subroutine hdf5read(filename, iodata, n1, n2, n3, repeats, cartcomm)
 
   character*(*) :: filename
   
-  integer :: n1, n2, n3
+  integer :: n1, n2, n3, repeats
   double precision, dimension(0:n1+1,0:n2+1,0:n3+1) :: iodata
 
   integer :: info = MPI_INFO_NULL
@@ -149,7 +152,7 @@ subroutine hdf5read(filename, iodata, n1, n2, n3, cartcomm)
   integer, dimension(ndim) :: arraysize, arraystart
   integer, dimension(ndim) :: arraygsize, arraysubsize
 
-  integer :: cartcomm, ierr, rank, size
+  integer :: cartcomm, ierr, rank, size, repeat
 
   integer, dimension(ndim) :: dims, coords
   logical, dimension(ndim) :: periods
@@ -269,13 +272,15 @@ subroutine hdf5read(filename, iodata, n1, n2, n3, cartcomm)
   end if
 
   ! Read the dataset collectively. 
-  CALL h5dread_f(dset_id, H5T_NATIVE_DOUBLE, iodata(1:n1, 1:n2, 1:n3), &
-       dimsf, ierr, file_space_id = filespace, mem_space_id = memspace, &
-      xfer_prp = plist_id)
-  if(ierr .ne. 0) then
-      write(*,*) 'Problem with h5dread_f'
-      return
-  end if
+  do repeat = 1, repeats
+      CALL h5dread_f(dset_id, H5T_NATIVE_DOUBLE, iodata(1:n1, 1:n2, 1:n3), &
+           dimsf, ierr, file_space_id = filespace, mem_space_id = memspace, &
+           xfer_prp = plist_id)
+      if(ierr .ne. 0) then
+          write(*,*) 'Problem with h5dread_f'
+          return
+      end if
+  end do
 ! Read the dataset independently. Comment out the collective
 ! and use the following call to investigate non-collective performance.
 !    CALL h5dread_f(dset_id, H5T_NATIVE_DOUBLE, data, arraygsize, ierr, &

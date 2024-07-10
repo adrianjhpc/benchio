@@ -8,17 +8,17 @@ module ionetcdf
 
 contains
 
-subroutine netcdfwrite(filename, iodata, n1, n2, n3, cartcomm)
+subroutine netcdfwrite(filename, iodata, n1, n2, n3, repeats, cartcomm)
 
   character*(*) :: filename
   
-  integer :: n1, n2, n3
+  integer :: n1, n2, n3, repeats
   double precision, dimension(0:n1+1,0:n2+1,0:n3+1) :: iodata
 
   integer, dimension(ndim) :: arraysize, arraystart
   integer, dimension(ndim) :: arraygsize, arraysubsize
 
-  integer :: cartcomm, ierr, rank, size
+  integer :: cartcomm, ierr, rank, size, repeat
 
   integer, dimension(ndim) :: dims, coords
   logical, dimension(ndim) :: periods
@@ -74,25 +74,28 @@ subroutine netcdfwrite(filename, iodata, n1, n2, n3, cartcomm)
 
   ! Write the data to file, start will equal the displacement from the 
   ! start of the file and count is the number of points each proc writes. 
-  call check( nf90_put_var(ncid, varid, iodata(1:n1, 1:n2, 1:n3), &
-              start = arraystart, count = arraysubsize) )
+  do repeat = 1, repeats
+      call check( nf90_put_var(ncid, varid, iodata(1:n1, 1:n2, 1:n3), &
+                  start = arraystart, count = arraysubsize) )
+  end do
+
   ! Close the file. This frees up any internal netCDF resources
   ! associated with the file, and flushes any buffers.
   call check( nf90_close(ncid) )
 
 end subroutine netcdfwrite
 
-subroutine netcdfread(filename, iodata, n1, n2, n3, cartcomm)
+subroutine netcdfread(filename, iodata, n1, n2, n3, repeats, cartcomm)
 
   character*(*) :: filename
   
-  integer :: n1, n2, n3
+  integer :: n1, n2, n3, repeats
   double precision, dimension(0:n1+1,0:n2+1,0:n3+1) :: iodata
 
   integer, dimension(ndim) :: arraysize, arraystart
   integer, dimension(ndim) :: arraygsize, arraysubsize
 
-  integer :: cartcomm, ierr, rank, size
+  integer :: cartcomm, ierr, rank, size, repeat
 
   integer, dimension(ndim) :: dims, coords
   logical, dimension(ndim) :: periods
@@ -142,8 +145,10 @@ subroutine netcdfread(filename, iodata, n1, n2, n3, cartcomm)
 
   ! Read the data from file, start will equal the displacement from the 
   ! start of the file and count is the number of points each proc reads. 
-  call check( nf90_get_var(ncid, varid, iodata(1:n1, 1:n2, 1:n3), &
-              start = arraystart, count = arraysubsize) )
+  do repeat = 1, repeats
+      call check( nf90_get_var(ncid, varid, iodata(1:n1, 1:n2, 1:n3), &
+                  start = arraystart, count = arraysubsize) )
+  end do
   ! Close the file. This frees up any internal netCDF resources
   ! associated with the file, and flushes any buffers.
   call check( nf90_close(ncid) )

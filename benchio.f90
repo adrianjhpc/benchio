@@ -71,6 +71,7 @@ program benchio
      write(*,'(a,f12.2,a)') 'Total amount of data = ', gibdata, ' GiB'
      write(*,*)
      write(*,*) 'Clock resolution is ', benchtick()*1.0e6, ', usecs'
+     write(*,*) 'Repeating read/write operations ',repeats,' times'
      write(*,*) "Performing the following IO operations"
      write(*,*) "------------------------------"
 
@@ -189,67 +190,67 @@ program benchio
                     
                  case(1:3)
                     if(iomode .eq. 1 .and. domode(iomode)) then
-                       call serialwrite(filename, iodata, n1, n2, n3, iocomm)
+                       call serialwrite(filename, iodata, n1, n2, n3, repeats, iocomm)
                        benchmarked = .true.
                     end if
                     
                     if(iomode .eq. 2 .and. domode(iomode)) then
-                       call serialread(filename, iodata, n1, n2, n3, iocomm)
+                       call serialread(filename, iodata, n1, n2, n3, repeats, iocomm)
                        benchmarked = .true.
                     end if
                     
                  case(4)
                     if(iomode .eq. 1 .and. domode(iomode)) then
-                       call mpiiowrite(filename, iodata, n1, n2, n3, iocomm)
+                       call mpiiowrite(filename, iodata, n1, n2, n3, repeats, iocomm)
                        benchmarked = .true.
                     end if
                     
                     if(iomode .eq. 2 .and. domode(iomode)) then
-                       call mpiioread(filename, iodata, n1, n2, n3, iocomm)
+                       call mpiioread(filename, iodata, n1, n2, n3, repeats, iocomm)
                        benchmarked = .true.
                     end if
                     
                  case(5)
                     if(iomode .eq. 1 .and. domode(iomode)) then
-                       call hdf5write(filename, iodata, n1, n2, n3, iocomm)
+                       call hdf5write(filename, iodata, n1, n2, n3, repeats, iocomm)
                        benchmarked = .true.
                     end if
                     
                     if(iomode .eq. 2 .and. domode(iomode)) then
-                       call hdf5read(filename, iodata, n1, n2, n3, iocomm)
+                       call hdf5read(filename, iodata, n1, n2, n3, repeats, iocomm)
                        benchmarked = .true.
                     end if
                     
                  case(6)
                     if(iomode .eq. 1 .and. domode(iomode)) then
-                       call netcdfwrite(filename, iodata, n1, n2, n3, iocomm)
+                       call netcdfwrite(filename, iodata, n1, n2, n3, repeats, iocomm)
                        benchmarked = .true.
                     end if
                     
                     if(iomode .eq. 2 .and. domode(iomode)) then
-                       call netcdfread(filename, iodata, n1, n2, n3, iocomm)
+                       call netcdfread(filename, iodata, n1, n2, n3, repeats, iocomm)
                        benchmarked = .true.
                     end if
                     
                  case(7)
                     if(iomode .eq. 1 .and. domode(iomode)) then
-                       call adioswrite(filename, iodata, n1, n2, n3, iocomm, initialise_time)
+                       call adioswrite(filename, iodata, n1, n2, n3, repeats, iocomm, initialise_time)
                        benchmarked = .true.
                     end if
                     
                     if(iomode .eq. 2 .and. domode(iomode)) then
-                       call adiosread(filename, iodata, n1, n2, n3, iocomm, initialise_time)
+                       call adiosread(filename, iodata, n1, n2, n3, repeats, iocomm, initialise_time)
                        benchmarked = .true.
                     end if
                     
                  case(8)
                     if(iomode .eq. 1 .and. domode(iomode)) then
-                       call daoswrite(filename, iodata, n1, n2, n3, iocomm, 0, initialise_time, trim(ioparamval(3)))
+                       call daoswrite(filename, iodata, n1, n2, n3, repeats, iocomm, 0, initialise_time, trim(ioparamval(3)))
                        benchmarked = .true.
                     end if
                     
                     if(iomode .eq. 2 .and. domode(iomode)) then
-                       call daosread(filename, iodata, n1, n2, n3, iocomm, 0, initialise_time, trim(ioparamval(3)))
+                       call daosread(filename, iodata, n1, n2, n3, repeats, iocomm, 0, initialise_time, trim(ioparamval(3)))
                        benchmarked = .true.
                     end if
                     
@@ -266,8 +267,8 @@ program benchio
                  if(benchmarked) then
                  
                     time = t1 - t0
-                    iorate = mibdata/time
-                    ioratenoinitialise = mibdata/(time - initialise_time)
+                    iorate = (repeats*mibdata)/time
+                    ioratenoinitialise = (repeats*mibdata)/(time - initialise_time)
                     if (rank == 0) then
                        if(iomode .eq. 1) then
                           operation = 'write'

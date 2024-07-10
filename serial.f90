@@ -11,17 +11,17 @@ module ioserial
 
   contains
 
-subroutine serialwrite(filename, iodata, n1, n2, n3, comm)
+subroutine serialwrite(filename, iodata, n1, n2, n3, repeats, comm)
 
   character*(*) :: filename
   
-  integer :: n1, n2, n3
+  integer :: n1, n2, n3, repeats
   double precision, dimension(0:n1+1,0:n2+1,0:n3+1) :: iodata
   double precision, dimension(:), allocatable :: tempdata
-  integer :: comm, ierr, rank, size
+  integer :: comm, ierr, rank, size, repeat
   integer, parameter :: iounit = 10
 
-  integer :: i,j,k
+  integer :: i, j, k
   integer :: approach
   logical :: first = .true.
 
@@ -51,23 +51,32 @@ subroutine serialwrite(filename, iodata, n1, n2, n3, comm)
      if(approach == 0) then
        open(file=filename, unit=iounit, access='stream')
        do i = 1, size
-         write(iounit) iodata(1:n1, 1:n2, 1:n3)
+         do repeat = 1, repeats
+            write(iounit) iodata(1:n1, 1:n2, 1:n3)
+            rewind(iounit)
+         end do
        end do
        close(iounit)
      else if(approach == 1) then
        open(file=filename, unit=iounit, access='direct', recl=8*n1)
        do i = 1, size
-         do k = 1,n3
-           do j = 1,n2
-             write(iounit, rec=1) iodata(1:n1, j, k)
+         do repeat = 1, repeats
+           do k = 1,n3
+             do j = 1,n2
+               write(iounit, rec=1) iodata(1:n1, j, k)
+             end do
            end do
+           rewind(iounit)
          end do
        end do
        close(iounit)
      else if(approach == 2) then
        open(file=filename, unit=iounit, access='direct', recl=8*n1*n2*n3)
        do i = 1, size
-         write(iounit, rec=1) tempdata
+         do repeat = 1, repeats
+           write(iounit, rec=1) tempdata
+           rewind(iounit)
+         end do 
        end do
        close(iounit)
      else
@@ -83,14 +92,14 @@ subroutine serialwrite(filename, iodata, n1, n2, n3, comm)
 end subroutine serialwrite
 
 
-subroutine serialread(filename, iodata, n1, n2, n3, comm)
+subroutine serialread(filename, iodata, n1, n2, n3, repeats, comm)
 
   character*(*) :: filename
 
-  integer :: n1, n2, n3
+  integer :: n1, n2, n3, repeats
   double precision, dimension(0:n1+1,0:n2+1,0:n3+1) :: iodata
   double precision, dimension(:), allocatable :: tempdata
-  integer :: comm, ierr, rank, size
+  integer :: comm, ierr, rank, size, repeat
   integer, parameter :: iounit = 10
 
   integer :: i,j,k
@@ -113,23 +122,32 @@ subroutine serialread(filename, iodata, n1, n2, n3, comm)
      if(approach == 0) then
        open(file=filename, unit=iounit, access='stream')
        do i = 1, size
-         read(iounit) iodata(1:n1, 1:n2, 1:n3)
+         do repeat = 1, repeats
+           read(iounit) iodata(1:n1, 1:n2, 1:n3)
+           rewind(iounit)
+         end do
        end do
        close(iounit)
      else if(approach == 1) then
        open(file=filename, unit=iounit, access='direct', recl=8*n1)
        do i = 1, size
+         do repeat = 1, repeats
          do k = 1,n3
            do j = 1,n2
              read(iounit, rec=1) iodata(1:n1, j, k)
            end do
+         end do
+           rewind(iounit)
          end do
        end do
        close(iounit)
      else if(approach == 2) then
        open(file=filename, unit=iounit, access='direct', recl=8*n1*n2*n3)
        do i = 1, size
+         do repeat = 1, repeats
          read(iounit, rec=1) tempdata
+           rewind(iounit)
+         end do
        end do
        close(iounit)
      else
