@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <adios-config>
-  <io name="Output">
+  <io name="Input">
 
     <engine type="BP5">
 

@@ -8,12 +8,15 @@ module benchutil
   integer, parameter :: numiolayer = 8
   integer, parameter :: numstriping = 3
   integer, parameter :: numioparam = 3
+  integer, parameter :: numiomode = 2
   integer, parameter :: maxlen = 64
   integer, parameter :: ndim = 3
+  character*(maxlen), dimension(numiomode)  :: iomodestring
   character*(maxlen), dimension(numiolayer)  :: iostring, iolayername
   character*(maxlen), dimension(numioparam)  :: ioparam, ioparamval
   character*(maxlen), dimension(numstriping) :: stripestring
 
+  logical, dimension(numiomode)   :: domode = .false.
   logical, dimension(numiolayer)  :: doio = .false.
   logical, dimension(numstriping) :: dostripe = .false.
 
@@ -29,6 +32,9 @@ module benchutil
   logical :: ioflag = .false.
   logical :: ioparamflag = .false.
   logical :: stripeflag = .false.
+  logical :: keepdataflag = .false.
+
+  character*(maxlen) :: keepdataname
 
   integer, parameter :: n1def = 128
   integer, parameter :: n2def = 128
@@ -58,6 +64,9 @@ contains
     iolayermulti = 2
     iolayernode  = 3 
 
+    iomodestring(1) = 'write'
+    iomodestring(2) = 'read'
+
     iostring(1) = 'Serial'
     iostring(2) = 'Proc'
     iostring(3) = 'Node'
@@ -83,11 +92,13 @@ contains
     ioparamval(1) = ''
     ioparamval(2) = 'daos'
     ioparamval(3) = 'benchio'
-    
+
     stripestring(1) = 'unstriped'
     stripestring(2) = 'striped'
     stripestring(3) = 'defstriped'
     
+    keepdataname = 'keepdata'
+
     call MPI_Init(ierr)
     
     comm = MPI_COMM_WORLD
@@ -194,8 +205,9 @@ contains
 
     implicit none
   
-    integer :: ierr, numargs, iarg, iargstep, iolayer, ioparami, istriping
+    integer :: ierr, numargs, iarg, iargstep, iolayer, ioparami, iomode, istriping
     character*(maxlen) :: argstring
+    logical :: keepdata, modeflag
 
     ! Parse the arguments
     doio(:) = .false.
@@ -205,10 +217,11 @@ contains
     
     if (numargs < 4) then
        if (rank == 0) then
-          write(*,*) "usage: benchio (n1, n2, n3) (local|global) [serial] [proc] [node]"
+          write(*,*) "usage: benchio (n1, n2, n3) (local|global) [write] [read]"
+          write(*,*) "       [serial] [proc] [node] [mpiio]"
           write(*,*) "       [mpiio] [hdf5] [netcdf] [adios] [--file <file_name>] "
           write(*,*) "       [daos [--daos.pool <pool_name>] [--daos.cont <cont_name>]]"
-          write(*,*) "       [unstriped] [striped] [fullstriped]"
+          write(*,*) "       [unstriped] [striped] [fullstriped] [",keepdataname,"]"
        end if
        
        call MPI_Finalize(ierr)
@@ -230,12 +243,21 @@ contains
     
     iarg = 5
     do while(iarg <= numargs)
+       modeflag = .false.
        ioflag = .false.
        stripeflag = .false.
        ioparamflag = .false.
+       keepdata = .false.
        iargstep = 1
        
        call get_command_argument(iarg, argstring)      
+
+       do iomode = 1, numiomode
+          if (iomodestring(iomode) == argstring) then
+             modeflag = .true.
+             domode(iomode) = .true.
+          end if
+       end do
 
        do iolayer = 1, numiolayer
           if (iolayername(iolayer) == argstring) then
@@ -258,8 +280,13 @@ contains
              dostripe(istriping) = .true.
           end if
        end do
-       
-       if (.not.ioflag .and. .not.stripeflag .and. .not.ioparamflag) then        
+
+       if(argstring == keepdataname) then
+          keepdata = .true.
+          keepdataflag = .true.
+       end if
+
+       if (.not. modeflag .and. .not.ioflag .and. .not.stripeflag .and. .not.ioparamflag .and. .not. keepdata) then        
           write(*,*) "Illegal argument: ", argstring
           call MPI_Finalize(ierr)
           stop           
@@ -267,6 +294,13 @@ contains
 
        iarg = iarg + iargstep
     end do
+
+    if(domode(1) .eq. .false. .and. domode(2) .eq. .false.) then
+       domode(1) = .true.
+       if(rank == 0) then
+          write(*,*) 'I/O operation not specifed, defaulting to write'
+       end if
+    end if
     
     ! Check defaults
     if (count(doio(:)) == 0) then

@@ -5,6 +5,8 @@ program benchio
   use mpiio
   use ioserial
   use iohdf5
+  use ionetcdf
+  use adios
   use daos
   use daos_c_interface
 
@@ -12,8 +14,9 @@ program benchio
 
   character*(maxlen) :: filename, suffix
 
-  integer :: iolayer, istriping, ierr
+  character*(6) :: operation
 
+  integer :: iolayer, istriping, iomode, ierr
 ! Set local array size - global sizes l1, l2 and l3 are scaled
 ! by number of processes in each dimension
 
@@ -22,6 +25,8 @@ program benchio
   double precision, allocatable, dimension(:,:,:) :: iodata
 
   logical :: reorder = .false.
+
+  logical :: benchmarked
 
   double precision :: t0, t1, time, initialise_time, iorate, ioratenoinitialise, kibdata, mibdata, gibdata
   
@@ -66,8 +71,15 @@ program benchio
      write(*,'(a,f12.2,a)') 'Total amount of data = ', gibdata, ' GiB'
      write(*,*)
      write(*,*) 'Clock resolution is ', benchtick()*1.0e6, ', usecs'
-     write(*,*) "Using the following IO methods"
+     write(*,*) "Performing the following IO operations"
+     write(*,*) "------------------------------"
+
+     do iomode = 1, numiomode
+        if (domode(iomode)) write(*,*) iomodestring(iomode)
+     end do
+
      write(*,*)
+     write(*,*) "Using the following IO methods"
      write(*,*) "------------------------------"
 
      do iolayer = 1, numiolayer
@@ -108,12 +120,12 @@ program benchio
            j2 = coords(2)*n2 + i2
            j3 = coords(3)*n3 + i3
 
-           iodata(i1,i2,i3) = (j3-1)*l1*l2 + (j2-1)*l1 + j1
-
+           iodata(i1,i2,i3) = float((j3-1))*l1*l2 + (j2-1)*l1 + j1
         end do
      end do
   end do
 
+  ! Write benchmarks
   do iolayer = 1, numiolayer
 
      if(doio(iolayer)) then
@@ -142,7 +154,7 @@ program benchio
               suffix = ""
               
               iocomm = cartcomm
-              
+
               ! Deal with multiple files
               
               if (iolayer == iolayermulti) then
@@ -161,77 +173,146 @@ program benchio
               end if
 
               if (rank == 0) then
-                 write(*,*) 'Writing to ', filename
+                 write(*,*) 'I/O to ', filename
               end if
               
               initialise_time = 0.0
-              
-              call MPI_Barrier(comm, ierr)
-              t0 = benchtime()
-              
-              select case (iolayer)
-                 
-              case(1:3)
-                 call serialwrite(filename, iodata, n1, n2, n3, iocomm)
-                 
-              case(4)
-                 call mpiiowrite(filename, iodata, n1, n2, n3, iocomm)
-                 
-              case(5)
-                 call hdf5write(filename, iodata, n1, n2, n3, iocomm)
-                 
-              case(6)
-              !   call netcdfwrite(filename, iodata, n1, n2, n3, iocomm)
-                 
-              case(7)
-              !   call adioswrite(filename, iodata, n1, n2, n3, iocomm, initialise_time)
-                 
-              case(8)
-                 call daoswrite(filename, iodata, n1, n2, n3, iocomm, 0, initialise_time, trim(ioparamval(3)))
-                 
-              case default
-                 write(*,*) 'Illegal value of iolayer = ', iolayer
-                 stop
-                 
-              end select
-              
-              call MPI_Barrier(comm, ierr)
-              t1 = benchtime()
-              
-              time = t1 - t0
-              iorate = mibdata/time
-              ioratenoinitialise = mibdata/(time - initialise_time)
-              if (rank == 0) then
-                 write(*,'(a,f10.2,a,f12.2,a)') 'time = ', time, ', rate = ', iorate, ' MiB/s'
-                 write(*,'(a,f10.2,a,f12.2,a)') '(no initialise) time = ', time - initialise_time, ', rate = ', ioratenoinitialise, ' MiB/s'
-              end if
-              
-              ! Rank 0 in iocomm deletes
-              if (iolayer == 4 .or. iolayer == 5 .or. iolayer == 6) then
-                 if (rank == 0) then
-                    call execute_command_line("rm -r /mnt/dfuse/"//trim(stripestring(istriping))//'/'//trim(iolayername(iolayer))//'.dat')
-                 end if
-                 call MPI_Barrier(comm, ierr)
-              else if (iolayer == 7) then
-                 ! ADIOS makes a directory so the file deletion function will not work
-                 ! use the shell instead
-                 
-                 call MPI_Barrier(comm, ierr)
-                 if (rank == 0) then
-                    call execute_command_line("rm -r "//filename)
-                 end if
-                 call MPI_Barrier(comm, ierr)
-                 
-              else if (iolayer == 8) then
 
-                 call daos_finish(iocomm)
-                 
-                 call daos_cleanup(iocomm)
+              do iomode = 1, numiomode
 
-              else
-                 call leaderdelete(filename, iocomm)
+                 benchmarked = .false.
+                            
+                 call MPI_Barrier(comm, ierr)
+                 t0 = benchtime()
+                 
+                 select case (iolayer)
+                    
+                 case(1:3)
+                    if(iomode .eq. 1 .and. domode(iomode)) then
+                       call serialwrite(filename, iodata, n1, n2, n3, iocomm)
+                       benchmarked = .true.
+                    end if
+                    
+                    if(iomode .eq. 2 .and. domode(iomode)) then
+                       call serialread(filename, iodata, n1, n2, n3, iocomm)
+                       benchmarked = .true.
+                    end if
+                    
+                 case(4)
+                    if(iomode .eq. 1 .and. domode(iomode)) then
+                       call mpiiowrite(filename, iodata, n1, n2, n3, iocomm)
+                       benchmarked = .true.
+                    end if
+                    
+                    if(iomode .eq. 2 .and. domode(iomode)) then
+                       call mpiioread(filename, iodata, n1, n2, n3, iocomm)
+                       benchmarked = .true.
+                    end if
+                    
+                 case(5)
+                    if(iomode .eq. 1 .and. domode(iomode)) then
+                       call hdf5write(filename, iodata, n1, n2, n3, iocomm)
+                       benchmarked = .true.
+                    end if
+                    
+                    if(iomode .eq. 2 .and. domode(iomode)) then
+                       call hdf5read(filename, iodata, n1, n2, n3, iocomm)
+                       benchmarked = .true.
+                    end if
+                    
+                 case(6)
+                    if(iomode .eq. 1 .and. domode(iomode)) then
+                       call netcdfwrite(filename, iodata, n1, n2, n3, iocomm)
+                       benchmarked = .true.
+                    end if
+                    
+                    if(iomode .eq. 2 .and. domode(iomode)) then
+                       call netcdfread(filename, iodata, n1, n2, n3, iocomm)
+                       benchmarked = .true.
+                    end if
+                    
+                 case(7)
+                    if(iomode .eq. 1 .and. domode(iomode)) then
+                       call adioswrite(filename, iodata, n1, n2, n3, iocomm, initialise_time)
+                       benchmarked = .true.
+                    end if
+                    
+                    if(iomode .eq. 2 .and. domode(iomode)) then
+                       call adiosread(filename, iodata, n1, n2, n3, iocomm, initialise_time)
+                       benchmarked = .true.
+                    end if
+                    
+                 case(8)
+                    if(iomode .eq. 1 .and. domode(iomode)) then
+                       call daoswrite(filename, iodata, n1, n2, n3, iocomm, 0, initialise_time, trim(ioparamval(3)))
+                       benchmarked = .true.
+                    end if
+                    
+                    if(iomode .eq. 2 .and. domode(iomode)) then
+                       call daosread(filename, iodata, n1, n2, n3, iocomm, 0, initialise_time, trim(ioparamval(3)))
+                       benchmarked = .true.
+                    end if
+                    
+                    
+                 case default
+                    write(*,*) 'Illegal value of iolayer = ', iolayer
+                    stop
+                    
+                 end select                 
+
+                 call MPI_Barrier(comm, ierr)
+                 t1 = benchtime()
+
+                 if(benchmarked) then
+                 
+                    time = t1 - t0
+                    iorate = mibdata/time
+                    ioratenoinitialise = mibdata/(time - initialise_time)
+                    if (rank == 0) then
+                       if(iomode .eq. 1) then
+                          operation = 'write'
+                       else
+                          operation = 'read'
+                       end if
+                       write(*,'(a,a,f10.2,a,f12.2,a)') operation,' time = ', time, ', rate = ', iorate, ' MiB/s'
+                       write(*,'(a,a,f10.2,a,f12.2,a)') operation,' (no initialise) time = ', time - initialise_time, ', rate = ', ioratenoinitialise, ' MiB/s'
+                    end if
+                    
+                 end if
+
+              end do
+
+              if(.not. keepdataflag) then
+                 
+                 ! Rank 0 in iocomm deletes
+                 if (iolayer == 4 .or. iolayer == 5 .or. iolayer == 6) then
+                    if (rank == 0) then
+                       !      call execute_command_line("rm -r /mnt/dfuse/"//trim(stripestring(istriping))//'/'//trim(iolayername(iolayer))//'.dat')
+                       call execute_command_line('rm -r '//trim(stripestring(istriping))//'/'//trim(iolayername(iolayer))//'.dat')
+                    end if
+                    call MPI_Barrier(comm, ierr)
+                 else if (iolayer == 7) then
+                    ! ADIOS makes a directory so the file deletion function will not work
+                    ! use the shell instead
+                    
+                    call MPI_Barrier(comm, ierr)
+                    if (rank == 0) then
+                       call execute_command_line("rm -r "//filename)
+                    end if
+                    call MPI_Barrier(comm, ierr)
+                    
+                 else if (iolayer == 8) then
+                    
+                    call daos_finish(iocomm)
+                    
+                    call daos_cleanup(iocomm)
+                    
+                 else
+                    call leaderdelete(filename, iocomm)
+                 end if
+                 
               end if
-           
+
            end if
 
         end do
