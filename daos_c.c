@@ -372,8 +372,9 @@ void daos_write_separate_arrays(int num_dims, long int *arraysize, long int *arr
     }
 
   }else{
-  
-    ierr =  daos_array_destroy(array_handle, DAOS_TX_NONE, NULL);
+
+    ierr = daos_array_close(array_handle, NULL);  
+    //    ierr =  daos_array_destroy(array_handle, DAOS_TX_NONE, NULL);
     if(ierr != 0){
       printf("Error destroying array %d\n", ierr);
       perror("daos_array_destroy");
@@ -904,7 +905,7 @@ void daos_read_separate_arrays(int num_dims, long int *arraysize, long int *arra
     MPI_Abort(communicator, 0);
   }
 
-  ierr = daos_array_destroy(array_handle, DAOS_TX_NONE, NULL);
+  //  ierr = daos_array_destroy(array_handle, DAOS_TX_NONE, NULL);
   if(ierr != 0){
     printf("Error destroying array\n");
     perror("daos_array_destroy");
@@ -1014,7 +1015,7 @@ void daos_read_single_array(int num_dims, long int *arraysize, long int *arraygs
     MPI_Abort(communicator, 0);
   }
 
-  ierr = daos_array_destroy(array_handle, DAOS_TX_NONE, NULL);
+  //  ierr = daos_array_destroy(array_handle, DAOS_TX_NONE, NULL);
   if(ierr != 0){
     printf("Error destroying array\n");
     perror("daos_array_destroy");

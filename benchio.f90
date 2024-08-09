@@ -330,7 +330,9 @@ program benchio
      write(*,*)
   end if
 
-  call MPI_Comm_free(iocomm, ierr)
+  if(iocomm .ne. MPI_COMM_SELF) then
+     call MPI_Comm_free(iocomm, ierr)
+  end if
 
   call benchiofinal()
   

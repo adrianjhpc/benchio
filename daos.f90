@@ -126,7 +126,7 @@ subroutine daoswrite(filename, iodata, n1, n2, n3, repeats, cartcomm, daosconfig
 
      do repeat = 1, repeats
 
-     call daos_write_array(ndim, arraysize, arraygsize, arraysubsize, arraystart, out_data, object_class_c, blocksize, check_data, daosconfig, cartcomm)
+        call daos_write_array(ndim, arraysize, arraygsize, arraysubsize, arraystart, out_data, object_class_c, blocksize, check_data, daosconfig, cartcomm)
 
      end do
 
@@ -134,7 +134,7 @@ subroutine daoswrite(filename, iodata, n1, n2, n3, repeats, cartcomm, daosconfig
 
      do repeat = 1, repeats
 
-     call daos_write_object(ndim, arraysize, arraygsize, arraysubsize, arraystart, out_data, object_class_c, blocksize, check_data, daosconfig, cartcomm)
+        call daos_write_object(ndim, arraysize, arraygsize, arraysubsize, arraystart, out_data, object_class_c, blocksize, check_data, daosconfig, cartcomm)
 
      end do
 
@@ -289,7 +289,7 @@ subroutine daosread(filename, iodata, n1, n2, n3, repeats, cartcomm, daosconfig,
 
      do repeat = 1, repeats
 
-     call daos_read_array(ndim, arraysize, arraygsize, arraysubsize, arraystart, read_data, object_class_c, daosconfig, cartcomm)
+        call daos_read_array(ndim, arraysize, arraygsize, arraysubsize, arraystart, read_data, object_class_c, daosconfig, cartcomm)
 
      end do
 
@@ -297,7 +297,7 @@ subroutine daosread(filename, iodata, n1, n2, n3, repeats, cartcomm, daosconfig,
 
      do repeat = 1, repeats
 
-     call daos_read_object(ndim, arraysize, arraygsize, arraysubsize, arraystart, read_data, object_class_c, daosconfig, cartcomm)
+        call daos_read_object(ndim, arraysize, arraygsize, arraysubsize, arraystart, read_data, object_class_c, daosconfig, cartcomm)
 
      end do
 
