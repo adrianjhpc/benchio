@@ -265,8 +265,23 @@ program benchio
                  t1 = benchtime()
 
                  if(benchmarked) then
+                    write(*,*) rank,'time',t1-t0
+                 end if
+
+                 if(benchmarked) then
                  
                     time = t1 - t0
+
+                    ! Don't rely on MPI_Barrier to give properly synced timings.
+                    ! Select the maximum time across all workers. We have seen
+                    ! situtations where even with barriers timings are very
+                    ! variable so this seems the best approach.
+                    if(rank == 0) then
+                        call MPI_Reduce(MPI_IN_PLACE, time, 1, MPI_DOUBLE_PRECISION, MPI_MAX, 0, comm, ierr)
+                    else                         
+                        call MPI_Reduce(time, time, 1, MPI_DOUBLE_PRECISION, MPI_MAX, 0, comm, ierr)
+                    end if
+
                     iorate = (repeats*mibdata)/time
                     ioratenoinitialise = (repeats*mibdata)/(time - initialise_time)
                     if (rank == 0) then
