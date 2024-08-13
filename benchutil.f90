@@ -216,7 +216,7 @@ contains
 
     numargs = command_argument_count()
     
-    if (numargs < 5) then
+    if (numargs < 6) then
        if (rank == 0) then
           write(*,*) "usage: benchio (n1, n2, n3) (repeats) (local|global) [write] [read]"
           write(*,*) "       [serial] [proc] [node] [mpiio]"
