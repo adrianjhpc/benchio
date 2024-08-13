@@ -299,7 +299,7 @@ contains
        iarg = iarg + iargstep
     end do
 
-    if(domode(1) .eqv. .false. .and. domode(2) .eqv. .false.) then
+    if((domode(1) .eqv. .false.) .and. (domode(2) .eqv. .false.)) then
        domode(1) = .true.
        if(rank == 0) then
           write(*,*) 'I/O operation not specifed, defaulting to write'
