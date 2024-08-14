@@ -176,7 +176,6 @@ subroutine daosread(filename, iodata, n1, n2, n3, repeats, cartcomm, daosconfig,
   
   implicit none
 
-  integer, parameter :: check_data = 0
   character*(*) :: filename, cont_name
   
   integer :: n1, n2, n3, repeats, daosconfig
