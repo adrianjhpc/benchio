@@ -892,7 +892,7 @@ void daos_read_separate_arrays(int num_dims, long int *arraysize, long int *arra
     total_size = total_size * arraysubsize[i];
   }
  
-  ierr = daos_array_get_size(array_handle, DAOS_TX_NONE, &array_size, NULL);
+  //ierr = daos_array_get_size(array_handle, DAOS_TX_NONE, &array_size, NULL);
 
   if(array_size != total_size){
     printf("DAOS array sizes not the same as the calculated size %ld %ld\n", array_size, total_size);
