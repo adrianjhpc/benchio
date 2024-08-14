@@ -61,6 +61,7 @@ void daos_initialise_fortran(char *pool_string, char *cont_string, MPI_Fint comm
 void daos_initialise(char *pool_string, char *cont_string, MPI_Comm communicator){
 
   int ierr, comm_rank;
+  size_t str_length;
   daos_pool_info_t pool_info;
   daos_cont_info_t container_info;
   daos_prop_t *container_properties;
@@ -70,13 +71,14 @@ void daos_initialise(char *pool_string, char *cont_string, MPI_Comm communicator
     return;
   }
   
-  if(strlen(cont_string) >= MAX_CONT_NAME_LEN){
+  str_length = strlen(cont_string);
+  if(str_length >= MAX_CONT_NAME_LEN){
     printf("Container name too long\n");
     perror("daos_initialise");
     MPI_Abort(communicator, 0);
     return;
   }
-  strncpy(container_name, cont_string, strlen(cont_string));
+  strncpy(container_name, cont_string, str_length);
   container_name[strlen(cont_string)] = '\0';
 
   MPI_Comm_rank(communicator, &comm_rank);
