@@ -262,7 +262,7 @@ void communicate_daos_handles(MPI_Comm communicator){
 
 }
 
-void daos_write_array_fortran(int num_dims, long int *arraysize, long int *arraygsize, long int *arraysubsize, long int *arraystart, double *data, char *obj_class, size_t block_size, int keep_data, int daosconfig, MPI_Fint communicator){
+void daos_write_array_fortran(int num_dims, long int *arraysize, long int *arraygsize, long int *arraysubsize, long int *arraystart, double *data, char *obj_class, size_t block_size, int repeats, int keep_data, int daosconfig, MPI_Fint communicator){
 
   MPI_Comm c_communicator;
 
@@ -270,11 +270,11 @@ void daos_write_array_fortran(int num_dims, long int *arraysize, long int *array
 
   if(daosconfig == 0){
 
-    daos_write_separate_arrays(num_dims, arraysize, arraygsize, arraysubsize, arraystart, data, obj_class, block_size, keep_data, communicator);
+    daos_write_separate_arrays(num_dims, arraysize, arraygsize, arraysubsize, arraystart, data, obj_class, block_size, repeats, keep_data, communicator);
 
   }else if(daosconfig == 1){
 
-    daos_write_single_array(num_dims, arraysize, arraygsize, arraysubsize, arraystart, data, obj_class, block_size, keep_data, communicator);
+    daos_write_single_array(num_dims, arraysize, arraygsize, arraysubsize, arraystart, data, obj_class, block_size, repeats, keep_data, communicator);
 
   }else if(daosconfig == 2){
 
@@ -288,7 +288,7 @@ void daos_write_array_fortran(int num_dims, long int *arraysize, long int *array
   
 }
 
-void daos_write_separate_arrays(int num_dims, long int *arraysize, long int *arraygsize, long int *arraysubsize, long int *arraystart, double *data, char *obj_class, size_t block_size, int keep_data, MPI_Comm communicator){
+void daos_write_separate_arrays(int num_dims, long int *arraysize, long int *arraygsize, long int *arraysubsize, long int *arraystart, double *data, char *obj_class, size_t block_size, int repeats, int keep_data, MPI_Comm communicator){
 
   int ierr, i;
   int comm_rank;
@@ -355,11 +355,14 @@ void daos_write_separate_arrays(int num_dims, long int *arraysize, long int *arr
   d_iov_set(&iov, &data[0], total_size);
   sgl.sg_iovs = &iov;
 
-  ierr = daos_array_write(array_handle, DAOS_TX_NONE, &iod, &sgl, NULL);
-  if(ierr != 0){
-    printf("Error writing array %d\n", ierr);
-    perror("daos_array_write");
-    MPI_Abort(communicator, 0);
+  // At the moment this just re-writes the same place in the array
+  for(int repeat = 0; repeat < repeats; repeat++){
+    ierr = daos_array_write(array_handle, DAOS_TX_NONE, &iod, &sgl, NULL);
+    if(ierr != 0){
+      printf("Error writing array %d\n", ierr);
+      perror("daos_array_write");
+      MPI_Abort(communicator, 0);
+    }
   }
 
   if(keep_data){
@@ -387,7 +390,7 @@ void daos_write_separate_arrays(int num_dims, long int *arraysize, long int *arr
   
 }
 
-void daos_write_single_array(int num_dims, long int *arraysize, long int *arraygsize, long int *arraysubsize, long int *arraystart, double *data, char *obj_class, size_t block_size, int keep_data, MPI_Comm communicator){
+void daos_write_single_array(int num_dims, long int *arraysize, long int *arraygsize, long int *arraysubsize, long int *arraystart, double *data, char *obj_class, size_t block_size, int repeats, int keep_data, MPI_Comm communicator){
 
   //TODO Fragile, assumes some arrays are 3 elements long (i.e. for a 3d problem).
   int ierr, i, j, k, total_parts;
@@ -494,11 +497,14 @@ void daos_write_single_array(int num_dims, long int *arraysize, long int *arrayg
     }
   }
 
-  ierr = daos_array_write(array_handle, DAOS_TX_NONE, &iod, &sgl, NULL);
-  if(ierr != 0){
-    printf("Error writing array %d\n", ierr);
-    perror("daos_array_write");
-    MPI_Abort(communicator, 0);
+  // At the moment this just re-writes the same place in the array
+  for(int repeat = 0; repeat < repeats; repeat++){
+    ierr = daos_array_write(array_handle, DAOS_TX_NONE, &iod, &sgl, NULL);
+    if(ierr != 0){
+      printf("Error writing array %d\n", ierr);
+      perror("daos_array_write");
+      MPI_Abort(communicator, 0);
+    }
   }
 
   if(keep_data){
@@ -532,7 +538,7 @@ void daos_write_single_array(int num_dims, long int *arraysize, long int *arrayg
 
 
 
-void daos_write_object_fortran(int num_dims, long int *objectsize, long int *objectgsize, long int *objectsubsize, long int *objectstart, double *data, char *obj_class, size_t block_size, int keep_data, int daosconfig, MPI_Fint communicator){
+void daos_write_object_fortran(int num_dims, long int *objectsize, long int *objectgsize, long int *objectsubsize, long int *objectstart, double *data, char *obj_class, size_t block_size, int repeats, int keep_data, int daosconfig, MPI_Fint communicator){
 
   MPI_Comm c_communicator;
 
@@ -540,11 +546,11 @@ void daos_write_object_fortran(int num_dims, long int *objectsize, long int *obj
 
   if(daosconfig == 3){
 
-    daos_write_separate_objects(num_dims, objectsize, objectgsize, objectsubsize, objectstart, data, obj_class, block_size, keep_data, communicator);
+    daos_write_separate_objects(num_dims, objectsize, objectgsize, objectsubsize, objectstart, data, obj_class, block_size, repeats, keep_data, communicator);
 
   }else if(daosconfig == 4){
 
-    daos_write_single_object(num_dims, objectsize, objectgsize, objectsubsize, objectstart, data, obj_class, block_size, keep_data, communicator);
+    daos_write_single_object(num_dims, objectsize, objectgsize, objectsubsize, objectstart, data, obj_class, block_size, repeats, keep_data, communicator);
 
   }else if(daosconfig == 5){
 
@@ -558,7 +564,7 @@ void daos_write_object_fortran(int num_dims, long int *objectsize, long int *obj
   
 }
 
-void daos_write_separate_objects(int num_dims, long int *objectsize, long int *objectgsize, long int *objectsubsize, long int *objectstart, double *data, char *obj_class, size_t block_size, int keep_data, MPI_Comm communicator){
+void daos_write_separate_objects(int num_dims, long int *objectsize, long int *objectgsize, long int *objectsubsize, long int *objectstart, double *data, char *obj_class, size_t block_size, int repeats, int keep_data, MPI_Comm communicator){
 
   int ierr, i;
   int comm_rank;
@@ -650,7 +656,7 @@ void daos_write_separate_objects(int num_dims, long int *objectsize, long int *o
   
 }
 
-void daos_write_single_object(int num_dims, long int *objectsize, long int *objectgsize, long int *objectsubsize, long int *objectstart, double *data, char *obj_class, size_t block_size, int keep_data, MPI_Comm communicator){
+void daos_write_single_object(int num_dims, long int *objectsize, long int *objectgsize, long int *objectsubsize, long int *objectstart, double *data, char *obj_class, size_t block_size, int repeats, int keep_data, MPI_Comm communicator){
 
   //TODO Fragile, assumes some objects are 3 elements long (i.e. for a 3d problem).
   int ierr, i, j, k, total_parts;
@@ -808,7 +814,7 @@ void daos_write_single_object(int num_dims, long int *objectsize, long int *obje
 
 
 
-void daos_read_array_fortran(int num_dims, long int *arraysize, long int *arraygsize, long int *arraysubsize, long int *arraystart, double *output_data, char *obj_class, int daosconfig, MPI_Fint communicator){
+void daos_read_array_fortran(int num_dims, long int *arraysize, long int *arraygsize, long int *arraysubsize, long int *arraystart, double *output_data, char *obj_class, int repeats, int daosconfig, MPI_Fint communicator){
 
   MPI_Comm c_communicator;
 
@@ -816,11 +822,11 @@ void daos_read_array_fortran(int num_dims, long int *arraysize, long int *arrayg
 
   if(daosconfig == 0){
 
-    daos_read_separate_arrays(num_dims, arraysize, arraygsize, arraysubsize, arraystart, output_data, obj_class, communicator);
+    daos_read_separate_arrays(num_dims, arraysize, arraygsize, arraysubsize, arraystart, output_data, obj_class, repeats, communicator);
 
   }else if(daosconfig == 1){
 
-    daos_read_single_array(num_dims, arraysize, arraygsize, arraysubsize, arraystart, output_data, obj_class, communicator);
+    daos_read_single_array(num_dims, arraysize, arraygsize, arraysubsize, arraystart, output_data, obj_class, repeats, communicator);
 
   }else if(daosconfig == 2){
 
@@ -835,7 +841,7 @@ void daos_read_array_fortran(int num_dims, long int *arraysize, long int *arrayg
 }
 
 
-void daos_read_separate_arrays(int num_dims, long int *arraysize, long int *arraygsize, long int *arraysubsize, long int *arraystart, double *output_data, char *obj_class, MPI_Comm communicator){
+void daos_read_separate_arrays(int num_dims, long int *arraysize, long int *arraygsize, long int *arraysubsize, long int *arraystart, double *output_data, char *obj_class, int repeats, MPI_Comm communicator){
 
   //TODO Fragile, assumes some arrays are 3 elements long (i.e. for a 3d problem).
   int ierr, i;
@@ -897,12 +903,15 @@ void daos_read_separate_arrays(int num_dims, long int *arraysize, long int *arra
   sgl.sg_nr = 1;
   d_iov_set(&iov, &output_data[0], total_size);
   sgl.sg_iovs = &iov;
-  
-  ierr = daos_array_read(array_handle, DAOS_TX_NONE, &iod, &sgl, NULL);
-  if(ierr != 0){
-    printf("Error reading array\n");
-    perror("daos_array_read");
-    MPI_Abort(communicator, 0);
+ 
+  // At the moment this just re-reads the same place in the array
+  for(int repeat = 0; repeat < repeats; repeat++){
+    ierr = daos_array_read(array_handle, DAOS_TX_NONE, &iod, &sgl, NULL);
+    if(ierr != 0){
+      printf("Error reading array\n");
+      perror("daos_array_read");
+      MPI_Abort(communicator, 0);
+    }
   }
 
   //  ierr = daos_array_destroy(array_handle, DAOS_TX_NONE, NULL);
@@ -916,7 +925,7 @@ void daos_read_separate_arrays(int num_dims, long int *arraysize, long int *arra
   
 }
 
-void daos_read_single_array(int num_dims, long int *arraysize, long int *arraygsize, long int *arraysubsize, long int *arraystart, double *output_data, char *obj_class, MPI_Comm communicator){
+void daos_read_single_array(int num_dims, long int *arraysize, long int *arraygsize, long int *arraysubsize, long int *arraystart, double *output_data, char *obj_class, int repeats, MPI_Comm communicator){
 
   //TODO Fragile, assumes some arrays are 3 elements long (i.e. for a 3d problem).
   int ierr, i, j, k, total_parts;
@@ -1008,11 +1017,14 @@ void daos_read_single_array(int num_dims, long int *arraysize, long int *arraygs
     }
   }
   
-  ierr = daos_array_read(array_handle, DAOS_TX_NONE, &iod, &sgl, NULL);
-  if(ierr != 0){
-    printf("Error reading array\n");
-    perror("daos_array_read");
-    MPI_Abort(communicator, 0);
+ // At the moment this just re-reads the same place in the array
+  for(int repeat = 0; repeat < repeats; repeat++){
+    ierr = daos_array_read(array_handle, DAOS_TX_NONE, &iod, &sgl, NULL);
+    if(ierr != 0){
+      printf("Error reading array\n");
+      perror("daos_array_read");
+      MPI_Abort(communicator, 0);
+    }
   }
 
   //  ierr = daos_array_destroy(array_handle, DAOS_TX_NONE, NULL);
@@ -1029,7 +1041,7 @@ void daos_read_single_array(int num_dims, long int *arraysize, long int *arraygs
   
 }
 
-void daos_read_object_fortran(int num_dims, long int *arraysize, long int *arraygsize, long int *arraysubsize, long int *arraystart, double *output_data, char *obj_class, int daosconfig, MPI_Fint communicator){
+void daos_read_object_fortran(int num_dims, long int *arraysize, long int *arraygsize, long int *arraysubsize, long int *arraystart, double *output_data, char *obj_class, int repeats, int daosconfig, MPI_Fint communicator){
 
   MPI_Comm c_communicator;
 
@@ -1037,11 +1049,11 @@ void daos_read_object_fortran(int num_dims, long int *arraysize, long int *array
 
   if(daosconfig == 3){
 
-    daos_read_separate_objects(num_dims, arraysize, arraygsize, arraysubsize, arraystart, output_data, obj_class, communicator);
+    daos_read_separate_objects(num_dims, arraysize, arraygsize, arraysubsize, arraystart, output_data, obj_class, repeats, communicator);
 
   }else if(daosconfig == 4){
 
-    daos_read_single_object(num_dims, arraysize, arraygsize, arraysubsize, arraystart, output_data, obj_class, communicator);
+    daos_read_single_object(num_dims, arraysize, arraygsize, arraysubsize, arraystart, output_data, obj_class, repeats, communicator);
 
   }else if(daosconfig == 5){
 
@@ -1056,7 +1068,7 @@ void daos_read_object_fortran(int num_dims, long int *arraysize, long int *array
 }
 
 
-void daos_read_separate_objects(int num_dims, long int *objectsize, long int *objectgsize, long int *objectsubsize, long int *objectstart, double *output_data, char *obj_class, MPI_Comm communicator){
+void daos_read_separate_objects(int num_dims, long int *objectsize, long int *objectgsize, long int *objectsubsize, long int *objectstart, double *output_data, char *obj_class, int repeats, MPI_Comm communicator){
 
   //TODO Fragile, assumes some objects are 3 elements long (i.e. for a 3d problem).
   int ierr, i;
@@ -1136,7 +1148,7 @@ void daos_read_separate_objects(int num_dims, long int *objectsize, long int *ob
   
 }
 
-void daos_read_single_object(int num_dims, long int *objectsize, long int *objectgsize, long int *objectsubsize, long int *objectstart, double *output_data, char *obj_class, MPI_Comm communicator){
+void daos_read_single_object(int num_dims, long int *objectsize, long int *objectgsize, long int *objectsubsize, long int *objectstart, double *output_data, char *obj_class, int repeats, MPI_Comm communicator){
 
   //TODO Fragile, assumes some objects are 3 elements long (i.e. for a 3d problem).
   int ierr, i, j, k, total_parts;

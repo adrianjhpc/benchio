@@ -265,10 +265,6 @@ program benchio
                  t1 = benchtime()
 
                  if(benchmarked) then
-                    write(*,*) rank,'time',t1-t0
-                 end if
-
-                 if(benchmarked) then
                  
                     time = t1 - t0
 

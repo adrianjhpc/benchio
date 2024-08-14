@@ -1,7 +1,7 @@
 MF=	Makefile-ngio
 
 FC=mpif90
-FFLAGS=-O3 -I/home/software/adios/2/include/adios2/fortran -I/home/software/phdf5/1.12.2/mpich/include -I/home/software/netcdf-fortran/4.6.1/intel/include -I/home/software/netcdf/4.9.2/intel/include 
+FFLAGS=-g -I/home/software/adios/2/include/adios2/fortran -I/home/software/phdf5/1.12.2/mpich/include -I/home/software/netcdf-fortran/4.6.1/intel/include -I/home/software/netcdf/4.9.2/intel/include 
 LFFLAGS=-L/home/software/adios/2/lib64 -ladios2_fortran_mpi -ladios2_fortran -ladios2_core_mpi -ladios2_core -L/home/software/phdf5/1.12.0/intelmpi/lib -lhdf5_hl -lhdf5 -lhdf5_fortran -L/home/software/netcdf-fortran/4.6.1/intel/lib -lnetcdff -L/home/software/netcdf/4.9.2/intel/lib -lnetcdf
 CC=mpicc
 CFLAGS=-I/home/nx01/nx01/adrianj/uuid/include

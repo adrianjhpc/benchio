@@ -27,7 +27,7 @@ subroutine daoswrite(filename, iodata, n1, n2, n3, repeats, cartcomm, daosconfig
   integer*8, dimension(ndim) :: arraygsize, arraysubsize
 
   integer(kind=c_size_t) :: blocksize
-  integer :: cartcomm, ierr, rank, size, delim_index, repeat
+  integer :: cartcomm, ierr, rank, size, delim_index
 
   integer, dimension(ndim) :: dims, coords
   logical, dimension(ndim) :: periods
@@ -124,19 +124,15 @@ subroutine daoswrite(filename, iodata, n1, n2, n3, repeats, cartcomm, daosconfig
      
   if(daosconfig .ge. 0 .and. daosconfig .le. 2) then
 
-     do repeat = 1, repeats
 
-        call daos_write_array(ndim, arraysize, arraygsize, arraysubsize, arraystart, out_data, object_class_c, blocksize, check_data, daosconfig, cartcomm)
+     call daos_write_array(ndim, arraysize, arraygsize, arraysubsize, arraystart, out_data, object_class_c, blocksize, repeats, check_data, daosconfig, cartcomm)
 
-     end do
 
   else if(daosconfig .ge. 3 .and. daosconfig .le. 5) then
 
-     do repeat = 1, repeats
 
-        call daos_write_object(ndim, arraysize, arraygsize, arraysubsize, arraystart, out_data, object_class_c, blocksize, check_data, daosconfig, cartcomm)
+     call daos_write_object(ndim, arraysize, arraygsize, arraysubsize, arraystart, out_data, object_class_c, blocksize, repeats, check_data, daosconfig, cartcomm)
 
-     end do
 
   else
 
@@ -152,11 +148,11 @@ subroutine daoswrite(filename, iodata, n1, n2, n3, repeats, cartcomm, daosconfig
      
      if(daosconfig .ge. 0 .and. daosconfig .le. 2) then
 
-        call daos_read_array(ndim, arraysize, arraygsize, arraysubsize, arraystart, read_data, object_class_c, daosconfig, cartcomm)
+        call daos_read_array(ndim, arraysize, arraygsize, arraysubsize, arraystart, read_data, object_class_c, repeats, daosconfig, cartcomm)
      
      else if(daosconfig .ge. 3 .and. daosconfig .le. 5) then
 
-        call daos_read_object(ndim, arraysize, arraygsize, arraysubsize, arraystart, read_data, object_class_c, daosconfig, cartcomm)
+        call daos_read_object(ndim, arraysize, arraygsize, arraysubsize, arraystart, read_data, object_class_c, repeats, daosconfig, cartcomm)
 
      else
         
@@ -193,7 +189,7 @@ subroutine daosread(filename, iodata, n1, n2, n3, repeats, cartcomm, daosconfig,
   integer*8, dimension(ndim) :: arraygsize, arraysubsize
 
   integer(kind=c_size_t) :: blocksize
-  integer :: cartcomm, ierr, rank, size, delim_index, repeat
+  integer :: cartcomm, ierr, rank, size, delim_index
 
   integer, dimension(ndim) :: dims, coords
   logical, dimension(ndim) :: periods
@@ -287,19 +283,11 @@ subroutine daosread(filename, iodata, n1, n2, n3, repeats, cartcomm, daosconfig,
      
   if(daosconfig .ge. 0 .and. daosconfig .le. 2) then
 
-     do repeat = 1, repeats
-
-        call daos_read_array(ndim, arraysize, arraygsize, arraysubsize, arraystart, read_data, object_class_c, daosconfig, cartcomm)
-
-     end do
+     call daos_read_array(ndim, arraysize, arraygsize, arraysubsize, arraystart, read_data, object_class_c, repeats, daosconfig, cartcomm)
 
   else if(daosconfig .ge. 3 .and. daosconfig .le. 5) then
 
-     do repeat = 1, repeats
-
-        call daos_read_object(ndim, arraysize, arraygsize, arraysubsize, arraystart, read_data, object_class_c, daosconfig, cartcomm)
-
-     end do
+     call daos_read_object(ndim, arraysize, arraygsize, arraysubsize, arraystart, read_data, object_class_c, repeats, daosconfig, cartcomm)
 
   else
 

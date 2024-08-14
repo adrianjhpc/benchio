@@ -25,7 +25,7 @@ module daos_c_interface
        integer(kind=c_int), value, intent(in) :: communicator
      end subroutine daos_initialise
 
-     subroutine daos_write_array(num_dims, arraysize, arraygsize, arraysubsize, arraystart, data, obj_class, block_size, keep_data, daosconfig, communicator) bind(c, name="daos_write_array_fortran")
+     subroutine daos_write_array(num_dims, arraysize, arraygsize, arraysubsize, arraystart, data, obj_class, block_size, repeats, keep_data, daosconfig, communicator) bind(c, name="daos_write_array_fortran")
        import :: c_char
        import :: c_int
        import :: c_size_t
@@ -35,10 +35,10 @@ module daos_c_interface
        real(kind=c_double), dimension(*), intent(in) :: data
        character(kind=c_char), dimension(*), intent(in) :: obj_class
        integer(kind=c_size_t), value, intent(in)  :: block_size
-       integer(kind=c_int), value, intent(in) :: num_dims, keep_data, daosconfig, communicator
+       integer(kind=c_int), value, intent(in) :: num_dims, repeats, keep_data, daosconfig, communicator
      end subroutine daos_write_array
 
-     subroutine daos_write_object(num_dims, objectsize, objectgsize, objectsubsize, objectstart, data, obj_class, block_size, keep_data, daosconfig, communicator) bind(c, name="daos_write_object_fortran")
+     subroutine daos_write_object(num_dims, objectsize, objectgsize, objectsubsize, objectstart, data, obj_class, block_size, repeats, keep_data, daosconfig, communicator) bind(c, name="daos_write_object_fortran")
        import :: c_char
        import :: c_int
        import :: c_size_t
@@ -48,11 +48,11 @@ module daos_c_interface
        real(kind=c_double), dimension(*), intent(in) :: data
        character(kind=c_char), dimension(*), intent(in) :: obj_class
        integer(kind=c_size_t), value, intent(in)  :: block_size
-       integer(kind=c_int), value, intent(in) :: num_dims, keep_data, daosconfig, communicator
+       integer(kind=c_int), value, intent(in) :: num_dims, repeats, keep_data, daosconfig, communicator
      end subroutine daos_write_object
 
 
-     subroutine daos_read_array(num_dims, arraysize, arraygsize, arraysubsize, arraystart, output_data, obj_class, daosconfig, communicator) bind(c, name="daos_read_array_fortran")
+     subroutine daos_read_array(num_dims, arraysize, arraygsize, arraysubsize, arraystart, output_data, obj_class, repeats, daosconfig, communicator) bind(c, name="daos_read_array_fortran")
        import :: c_char
        import :: c_int
        import :: c_size_t
@@ -61,10 +61,10 @@ module daos_c_interface
        integer(kind=c_long), dimension(*), intent(in) :: arraysize, arraygsize, arraysubsize, arraystart
        real(kind=c_double), dimension(*), intent(out) :: output_data
        character(kind=c_char), dimension(*), intent(in) :: obj_class
-       integer(kind=c_int), value, intent(in) :: num_dims, daosconfig, communicator
+       integer(kind=c_int), value, intent(in) :: num_dims, repeats, daosconfig, communicator
      end subroutine daos_read_array
 
-     subroutine daos_read_object(num_dims, objectsize, objectgsize, objectsubsize, objectstart, output_data, obj_class, daosconfig, communicator) bind(c, name="daos_read_object_fortran")
+     subroutine daos_read_object(num_dims, objectsize, objectgsize, objectsubsize, objectstart, output_data, obj_class, repeats, daosconfig, communicator) bind(c, name="daos_read_object_fortran")
        import :: c_char
        import :: c_int
        import :: c_size_t
@@ -73,7 +73,7 @@ module daos_c_interface
        integer(kind=c_long), dimension(*), intent(in) :: objectsize, objectgsize, objectsubsize, objectstart
        real(kind=c_double), dimension(*), intent(out) :: output_data
        character(kind=c_char), dimension(*), intent(in) :: obj_class
-       integer(kind=c_int), value, intent(in) :: num_dims, daosconfig, communicator
+       integer(kind=c_int), value, intent(in) :: num_dims, repeats, daosconfig, communicator
      end subroutine daos_read_object
 
 
