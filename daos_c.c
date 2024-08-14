@@ -881,7 +881,8 @@ void daos_read_separate_arrays(int num_dims, long int *arraysize, long int *arra
   
   ierr = daos_array_open(container_handle, array_obj_id, DAOS_TX_NONE, DAOS_OO_RW, &cell_size, &local_block_size, &array_handle, NULL);
   if (ierr != 0) {
-    printf("array open failed with %d", ierr);
+    printf("array open failed with %d\n", ierr);
+    MPI_Abort(communicator, 0);
   }
 
   total_size = sizeof(double);
@@ -893,6 +894,7 @@ void daos_read_separate_arrays(int num_dims, long int *arraysize, long int *arra
 
   if(array_size != total_size){
     printf("DAOS array sizes not the same as the calculated size %ld %ld\n", array_size, total_size);
+    MPI_Abort(communicator, 0);
   }
 
   iod.arr_nr = 1;
@@ -964,6 +966,7 @@ void daos_read_single_array(int num_dims, long int *arraysize, long int *arraygs
   ierr = daos_array_open(container_handle, array_obj_id, DAOS_TX_NONE, DAOS_OO_RW, &cell_size, &local_block_size, &array_handle, NULL);
   if (ierr != 0) {
     printf("%d array open failed with %d\n", comm_rank, ierr);
+    MPI_Abort(communicator, 0);
   }  
 
   // iod variables (ranges) represent the position in the DAOS array (i.e. the DAOS array where the data will be stored)
