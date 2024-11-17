@@ -220,6 +220,9 @@ void communicate_daos_handles(MPI_Comm communicator){
   
   if(comm_rank == 0){
     ierr = daos_cont_local2global(container_handle, &global_handle);
+    global_handle.iov_len = global_handle.iov_buf_len;
+    global_handle.iov_buf = malloc(global_handle.iov_buf_len);
+    ierr = daos_cont_local2global(container_handle, &global_handle);
     if(ierr != 0){
       printf("Error converting local container handle to global container handle\n");
       perror("daos_cont_local2global");
@@ -229,18 +232,10 @@ void communicate_daos_handles(MPI_Comm communicator){
   }
 
   ierr = MPI_Bcast(&global_handle.iov_buf_len, 1, MPI_UINT64_T, 0, communicator);
-
-  global_handle.iov_len = global_handle.iov_buf_len;
-  global_handle.iov_buf = malloc(global_handle.iov_buf_len);
-
-  if(comm_rank == 0){
-    ierr = daos_cont_local2global(container_handle, &global_handle);
-    if(ierr != 0){
-      printf("Error converting local container handle to global container handle\n");
-      perror("daos_cont_local2global");
-      MPI_Abort(communicator, 0);
-      return;
-    }
+ 
+  if(comm_rank != 0){
+    global_handle.iov_len = global_handle.iov_buf_len;
+    global_handle.iov_buf = malloc(global_handle.iov_buf_len);
   }
 
   ierr = MPI_Bcast(global_handle.iov_buf, global_handle.iov_buf_len, MPI_BYTE, 0, communicator);
