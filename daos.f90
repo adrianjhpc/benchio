@@ -27,7 +27,7 @@ subroutine daoswrite(filename, iodata, n1, n2, n3, cartcomm, daosconfig, initial
   integer*8, dimension(ndim) :: arraygsize, arraysubsize
 
   integer(kind=c_size_t) :: blocksize
-  integer :: cartcomm, ierr, rank, size, delim_index
+  integer :: cartcomm, ierr, local_rank, local_size, delim_index
 
   integer, dimension(ndim) :: dims, coords
   logical, dimension(ndim) :: periods
@@ -35,8 +35,8 @@ subroutine daoswrite(filename, iodata, n1, n2, n3, cartcomm, daosconfig, initial
   character(len=7) :: object_class, object_class_c
   character*(maxlen) :: object_type_name, pool_name, pool_name_c
 
-  call MPI_Comm_size(cartcomm, size, ierr)
-  call MPI_Comm_rank(cartcomm, rank, ierr)
+  call MPI_Comm_size(cartcomm, local_size, ierr)
+  call MPI_Comm_rank(cartcomm, local_rank, ierr)
 
   call MPI_Cart_get(cartcomm, ndim, dims, periods, coords, ierr)
 
@@ -46,13 +46,12 @@ subroutine daoswrite(filename, iodata, n1, n2, n3, cartcomm, daosconfig, initial
   call split_string(filename, object_type_name, pool_name, "/", delim_index)
 
   call convert_to_c_string(trim(pool_name), pool_name_c)
-
   if(object_type_name(1:delim_index-1) == 'unstriped') then
-     object_class =  "OC_S1"
+     object_class =  "OC_RP_2G1"!"OC_S1"
   else if(object_type_name(1:delim_index-1) == 'defstriped') then
-     object_class =  "OC_S8"
+     object_class =  "OC_RP_2G8"!"OC_S8"
   else if(object_type_name(1:delim_index-1) == 'striped') then
-     object_class =  "OC_SX"
+     object_class =  "OC_RP_2GX"!"OC_SX"
   else
      write(*,*) 'Problem defining the object class in DAOS write'
      write(*,*) 'Aborting that test'
@@ -61,7 +60,7 @@ subroutine daoswrite(filename, iodata, n1, n2, n3, cartcomm, daosconfig, initial
 
   call convert_to_c_string(trim(object_class), object_class_c)
 
-  if(rank == 0) then
+  if(local_rank == 0) then
      write(*,*) 'DAOS Object Class ', trim(object_class)
   end if
 
@@ -87,7 +86,7 @@ subroutine daoswrite(filename, iodata, n1, n2, n3, cartcomm, daosconfig, initial
   blocksize = 1024*1024
 
      
-  if(rank == 0) then
+  if(local_rank == 0) then
      
      if(daosconfig == 0) then
         
@@ -137,7 +136,7 @@ subroutine daoswrite(filename, iodata, n1, n2, n3, cartcomm, daosconfig, initial
   
   if(check_data == 1) then
      
-     if(rank == 0) then
+     if(local_rank == 0) then
         write(*,*) 'checking data so do not trust the timings'
      end if
      
@@ -157,8 +156,8 @@ subroutine daoswrite(filename, iodata, n1, n2, n3, cartcomm, daosconfig, initial
 
 
      if(.not. all(out_data .eq. read_data)) then
-        write(*,*) rank,'original ',out_data,' read ',read_data
-        write(*,*) rank,'out data and read data do not match'
+        write(*,*) local_rank,'original ',out_data,' read ',read_data
+        write(*,*) local_rank,'out data and read data do not match'
      end if
      
   end if

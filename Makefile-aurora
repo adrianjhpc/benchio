@@ -1,0 +1,57 @@
+MF=	Makefile-aurora
+
+FC=mpif90
+FFLAGS=-DDAOS -DADIOS -DMPIIO -DHDF5 -DNETCDF -O3 -fpp -I/opt/aurora/24.180.3/spack/unified/0.8.0/install/linux-sles15-x86_64/oneapi-2024.07.30.002/adios2-2.10.0-nzfwjin/include/adios2/fortran/  
+LFFLAGS=-ladios2_fortran_mpi -ladios2_fortran -ladios2_core_mpi -ladios2_core -lhdf5_hl -lhdf5 -lhdf5_fortran -lnetcdff -lnetcdf
+CC=mpicc
+CFLAGS=
+LCFLAGS=-luuid -ldaos -ldaos_common
+
+
+
+EXE=	benchio
+
+FSRC= \
+	benchclock.f90 \
+        benchutil.f90 \
+	benchio.f90 \
+	mpiio.f90 \
+	serial.f90 \
+	netcdf.f90 \
+	hdf5.f90 \
+	adios.f90 \
+        daos_c_interface.f90 \
+	daos.f90 
+
+CSRC= \
+	daos_c.c 
+
+
+#
+# No need to edit below this line
+#
+.SUFFIXES:
+.SUFFIXES: .f90 .o .c
+
+FOBJ=    $(FSRC:.f90=.o)
+COBJ=   $(CSRC:.c=.o)
+
+.f90.o:
+	$(FC) $(FFLAGS) -c $<
+
+.c.o:
+	$(CC) $(CFLAGS) -c $<
+
+all:    $(EXE)
+
+$(EXE): $(FOBJ) $(COBJ)
+	$(FC) $(FFLAGS) -o $@ $(FOBJ) $(COBJ) $(LFFLAGS) $(LCFLAGS)
+
+$(FOBJ): $(MF)
+$(COBJ): $(MF)
+
+benchio.o: benchclock.o benchutil.o mpiio.o serial.o netcdf.o hdf5.o adios.o daos_c_interface.o daos.o daos_c.o 
+
+clean: 
+	rm -fr *.o *.mod benchio
+

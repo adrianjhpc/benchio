@@ -161,7 +161,7 @@ program benchio
               
               call MPI_Barrier(comm, ierr)
               t0 = benchtime()
-              
+
               select case (iolayer)
                  
               case(1:3)
@@ -185,7 +185,8 @@ program benchio
 #endif                 
               case(8)
 #ifdef DAOS
-                 call daoswrite(filename, iodata, n1, n2, n3, iocomm, 1, initialise_time)
+                filename = trim(stripestring(istriping))//'/'//trim('DAOS_Explore_25')
+                call daoswrite(filename, iodata, n1, n2, n3, iocomm, 1, initialise_time)
 #endif                 
               case default
                  write(*,*) 'Illegal value of iolayer = ', iolayer

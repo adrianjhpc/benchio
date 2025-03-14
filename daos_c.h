@@ -1,4 +1,4 @@
-#include <uuid.h>
+#include <uuid/uuid.h>
 #include <daos.h>
 #include <mpi.h>
 #include <stdio.h>
@@ -10,7 +10,7 @@ int initialised = 0;
 daos_handle_t pool_handle;
 daos_handle_t container_handle;
 uuid_t container_uuid;
-char *container_name = "benchio";
+char *container_name = "IOR_Test";
 
 #define ERROR -1
 #define SUCCESS 0

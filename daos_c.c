@@ -714,15 +714,15 @@ void daos_write_single_object(int num_dims, long int *objectsize, long int *obje
     for(j=0; j<objectsubsize[1]; j++){
       // rg_len is the amount of data to be written into the DAOS object for this operation
       iod.arr_rgs[i*objectsubsize[1]+j].rg_len = objectsubsize[2]*sizeof(double);
-      // iod.arr_rgs[i*objectsubsize[1]+j].rg_len = objectsubsize[2];//*sizeof(double);
+      // iod.arr_rgs[i*objectsubsize[1]+j].rg_len = objectsubsize[2];// *sizeof(double);
       // idx is the offset in the object where the data should be written
       // In this case it's the offset in the global object of this local portion
       iod.arr_rgs[i*objectsubsize[1]+j].rg_idx = running_offset;
       running_offset = running_offset + (objectgsize[2]*sizeof(double));
-      //      running_offset = running_offset + (objectgsize[2]);//*sizeof(double));
+      //      running_offset = running_offset + (objectgsize[2]);// *sizeof(double));
     }
     running_offset = initial_offset + ((i+1)*(objectgsize[1]*objectgsize[2]*sizeof(double)));
-    //    running_offset = initial_offset + ((i+1)*(objectgsize[1]*objectgsize[2]));//*sizeof(double)));
+    //    running_offset = initial_offset + ((i+1)*(objectgsize[1]*objectgsize[2]));// *sizeof(double)));
   }
     
   sgl.sg_nr = total_parts;
@@ -1185,15 +1185,15 @@ void daos_read_single_object(int num_dims, long int *objectsize, long int *objec
     for(j=0; j<objectsubsize[1]; j++){  
       // rg_len is the amount of data to be written into the DAOS object for this operation
       rg[i*objectsubsize[1]+j].rg_len = objectsubsize[2]*sizeof(double);
-      //      rg[i*objectsubsize[1]+j].rg_len = objectsubsize[2];//*sizeof(double);
+      //      rg[i*objectsubsize[1]+j].rg_len = objectsubsize[2];// *sizeof(double);
       // idx is the offset in the object where the data should be written
       // In this case it's the offset in the global object of this local portion
       rg[i*objectsubsize[1]+j].rg_idx = running_offset;
       running_offset = running_offset + (objectgsize[2]*sizeof(double));
-      //      running_offset = running_offset + (objectgsize[2]);//*sizeof(double));
+      //      running_offset = running_offset + (objectgsize[2]);// *sizeof(double));
     }
     running_offset = initial_offset + ((i+1)*objectgsize[1]*objectgsize[2]*sizeof(double));
-    //    running_offset = initial_offset + ((i+1)*objectgsize[1]*objectgsize[2]);//*sizeof(double));
+    //    running_offset = initial_offset + ((i+1)*objectgsize[1]*objectgsize[2]);// *sizeof(double));
   }
 
     
