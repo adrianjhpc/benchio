@@ -32,7 +32,7 @@ subroutine daoswrite(filename, iodata, n1, n2, n3, cartcomm, daosconfig, initial
   integer, dimension(ndim) :: dims, coords
   logical, dimension(ndim) :: periods
   
-  character(len=7) :: object_class, object_class_c
+  character(len=20) :: object_class, object_class_c
   character*(maxlen) :: object_type_name, pool_name, pool_name_c
 
   call MPI_Comm_size(cartcomm, local_size, ierr)
