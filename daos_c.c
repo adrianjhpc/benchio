@@ -25,7 +25,29 @@ daos_oclass_id_t str_to_oc(char * in) {
   }else if (strcmp(in, "OC_SX") == 0) {
     oc = OC_SX;
     set = 1;
+  }else if (strcmp(in, "OC_RP_2G1") == 0){
+    oc = OC_RP_2G1;
+    set = 1;
+  }else if (strcmp(in, "OC_RP_2G2") == 0){
+    oc = OC_RP_2G2;
+    set = 1;
+  }else if (strcmp(in, "OC_RP_2G4") == 0){
+    oc = OC_RP_2G4;
+    set = 1;
+  }else if (strcmp(in, "OC_RP_2G8") == 0){
+    oc = OC_RP_2G8;
+    set = 1;
+  }else if (strcmp(in, "OC_RP_2G16") == 0){
+    oc = OC_RP_2G16;
+    set = 1;
+  }else if (strcmp(in, "OC_RP_2G32") == 0){
+    oc = OC_RP_2G32;
+    set = 1;
+  }else if (strcmp(in, "OC_RP_2GX") == 0){
+    oc = OC_RP_2GX;
+    set = 1;
   }
+
   if (set == 0) printf("Did not find a valid object class, the provided string was %s\n", in);
   return oc;
 
