@@ -6,9 +6,6 @@ program benchio
   use ioserial
   use iohdf5
   use ionetcdf
-  use adios
-  use daos
-  use daos_c_interface
 
   implicit none
 
@@ -179,15 +176,6 @@ program benchio
 #ifdef NETCDF
                  call netcdfwrite(filename, iodata, n1, n2, n3, iocomm)
 #endif                 
-              case(7)
-#ifdef ADIOS
-                 call adioswrite(filename, iodata, n1, n2, n3, iocomm, initialise_time)
-#endif                 
-              case(8)
-#ifdef DAOS
-                filename = trim(stripestring(istriping))//'/'//trim('DAOS_Explore_25')
-                call daoswrite(filename, iodata, n1, n2, n3, iocomm, 1, initialise_time)
-#endif                 
               case default
                  write(*,*) 'Illegal value of iolayer = ', iolayer
                  stop
@@ -211,25 +199,6 @@ program benchio
                     call execute_command_line("rm -r /mnt/dfuse/"//trim(stripestring(istriping))//'/'//trim(iolayername(iolayer))//'.dat')
                  end if
                  call MPI_Barrier(comm, ierr)
-              else if (iolayer == 7) then
-#ifdef ADIOS
-                 ! ADIOS makes a directory so the file deletion function will not work
-                 ! use the shell instead
-                 
-                 call MPI_Barrier(comm, ierr)
-                 if (rank == 0) then
-                    call execute_command_line("rm -r "//filename)
-                 end if
-                 call MPI_Barrier(comm, ierr)
-#endif                 
-              else if (iolayer == 8) then
-#ifdef DAOS
-                 call daos_finish(iocomm)
-                 
-                 call daos_cleanup(iocomm)
-#endif
-              else
-                 call leaderdelete(filename, iocomm)
               end if
            
            end if
