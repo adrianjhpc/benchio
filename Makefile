@@ -1,8 +1,8 @@
 MF=	Makefile
 
-FC=mpif90
+FC=ftn
 FFLAGS=
-LFLAGS=-L/mnt/lustre/indy2lfs/sw/hdf5parallel/1.10.6-intel19-mpt225/lib -lhdf5_fortran -lnetcdff -lnetcdf
+LFLAGS=-lhdf5_fortran -lnetcdff -lnetcdf
 
 EXE=	benchio
 

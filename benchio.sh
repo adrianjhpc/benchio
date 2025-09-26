@@ -1,26 +1,25 @@
 #!/bin/bash --login
 
-#SBATCH --nodes=4
-#SBATCH --time=0:10:0
+#SBATCH --nodes=2
+#SBATCH --time=0:20:0
 #SBATCH --partition=standard
-#SBATCH --qos=standard
-#SBATCH --exclusive
-#SBATCH --tasks-per-node=36
+#SBATCH --qos=short
+#SBATCH --tasks-per-node=128
 #SBATCH --cpus-per-task=1
 #SBATCH --exclusive
 
-module load intel-compilers-18
-module load hdf5parallel/1.10.6-intel18-mpt222
-module load netcdf-parallel/4.7.4-intel18-mpt222
+module swap PrgEnv-cray PrgEnv-gnu
+module load cray-hdf5-parallelcray-hdf5-parallel
+module load cray-netcdf-hdf5parallel
 
 export MPI_TYPE_DEPTH=20
 
 echo "Starting job $SLURM_JOB_ID at `date`"
 
-for p in 1 36 72 144
+for p in 1 32 64 128 256
 do
 
-mpiexec_mpt -ppn 36 -n $p ./benchio
+srun -n $p ./benchio
 
 done
 
