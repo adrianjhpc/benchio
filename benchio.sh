@@ -9,7 +9,7 @@
 #SBATCH --exclusive
 
 module swap PrgEnv-cray PrgEnv-gnu
-module load cray-hdf5-parallelcray-hdf5-parallel
+module load cray-hdf5-parallel
 module load cray-netcdf-hdf5parallel
 
 export MPI_TYPE_DEPTH=20
